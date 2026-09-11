@@ -7,7 +7,6 @@
 [![Problem Statement ID](https://img.shields.io/badge/Problem%20Statement-26035-blue.svg)](#-problem-statement)
 [![Team](https://img.shields.io/badge/Team-CodeSmiths-green.svg)](#-team-codesmiths)
 [![Standard](https://img.shields.io/badge/Compliance-OIML%20R%2076--1%3A2006-teal.svg)](#-oiml-r-76-standard-compliance)
-[![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
 *An enterprise-grade, cloud-connected digital operating system for testing, verification, and tamper-evident certificate generation of Non-Automatic Weighing Instruments (NAWI) in strict compliance with OIML Recommendation R-76 and ISO/IEC 17025.*
 
