@@ -1,0 +1,667 @@
+/* Official Metrology Report & Print Styles */
+.report-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 34, 43, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 30px 20px;
+  overflow-y: auto;
+}
+
+.report-modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.35);
+  width: min(900px, 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 40px;
+  animation: reportModalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes reportModalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.report-modal-header {
+  background: #183e4e;
+  color: #ffffff;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.report-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+}
+
+.report-modal-header .actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.report-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.report-btn-print {
+  background: #0f7c76;
+  color: #ffffff;
+  border-color: #0f7c76;
+}
+
+.report-btn-print:hover {
+  background: #0d6b66;
+}
+
+.report-btn-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.report-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.report-btn-close {
+  background: transparent;
+  color: #a4c2be;
+  border: 0;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.report-btn-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* Printable Document Container */
+.printable-certificate {
+  background: #ffffff;
+  color: #17252b;
+  padding: 38px 44px;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.45;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Certificate Header */
+.cert-header {
+  border-bottom: 2px solid #183e4e;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+}
+
+.cert-logo-section {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.cert-emblem {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #183e4e, #0f7c76);
+  color: #ffffff;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(15, 124, 118, 0.25);
+  flex-shrink: 0;
+}
+
+.cert-emblem small {
+  font-size: 7px;
+  letter-spacing: 1px;
+  margin-top: -3px;
+  font-family: 'DM Mono', monospace;
+}
+
+.cert-org-title h2 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #183e4e;
+  margin: 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.cert-org-title p {
+  font-size: 9.5px;
+  color: #647b80;
+  margin: 2px 0 0;
+  font-weight: 500;
+}
+
+.cert-org-title .cert-standards {
+  font-size: 9px;
+  font-family: 'DM Mono', monospace;
+  color: #0f7c76;
+  margin-top: 3px;
+  font-weight: 600;
+}
+
+.cert-badge-section {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.cert-doc-type {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #0f7c76;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+}
+
+.cert-number {
+  font-family: 'DM Mono', monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #183e4e;
+  background: #eef5f3;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #d4e8e2;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.cert-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.cert-status-pass {
+  background: #e6f6ec;
+  color: #1a7f37;
+  border: 1px solid #bfe7cc;
+}
+
+.cert-status-review {
+  background: #fff8e5;
+  color: #9a6700;
+  border: 1px solid #f6dd9a;
+}
+
+.cert-title-banner {
+  text-align: center;
+  background: #f4f8f7;
+  border: 1px solid #e1ede9;
+  border-radius: 6px;
+  padding: 9px 14px;
+  margin-bottom: 18px;
+}
+
+.cert-title-banner h1 {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #183e4e;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cert-title-banner p {
+  font-size: 9px;
+  color: #647b80;
+  margin: 3px 0 0;
+}
+
+/* Sections */
+.cert-section {
+  margin-bottom: 18px;
+}
+
+.cert-section-title {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #183e4e;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border-bottom: 1px solid #dce7e4;
+  padding-bottom: 5px;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cert-section-title span.sec-num {
+  color: #0f7c76;
+  font-family: 'DM Mono', monospace;
+}
+
+/* Info Grids */
+.cert-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+
+.cert-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 16px;
+}
+
+.cert-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px 14px;
+}
+
+.cert-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cert-label {
+  font-size: 8px;
+  font-weight: 700;
+  color: #72898e;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.cert-val {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #183e4e;
+}
+
+.cert-val.mono {
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+}
+
+.cert-val.highlight {
+  color: #0f7c76;
+  font-weight: 700;
+}
+
+/* Observations Table */
+.cert-table-wrap {
+  border: 1px solid #d4e2de;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.cert-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5px;
+  text-align: left;
+}
+
+.cert-table th {
+  background: #eef5f3;
+  color: #2b545a;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 7px 10px;
+  border-bottom: 1.5px solid #cbded9;
+  border-right: 1px solid #dce8e4;
+}
+
+.cert-table th:last-child {
+  border-right: none;
+}
+
+.cert-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #e7f0ed;
+  border-right: 1px solid #eef5f2;
+  color: #31484d;
+  font-family: 'DM Mono', monospace;
+  font-size: 9.5px;
+}
+
+.cert-table td:last-child {
+  border-right: none;
+}
+
+.cert-table tr:nth-child(even) {
+  background: #fbfdfc;
+}
+
+.cert-table .td-pass {
+  color: #1a7f37;
+  font-weight: 700;
+}
+
+.cert-table .td-fail {
+  color: #cf222e;
+  font-weight: 700;
+}
+
+/* Summary / Decision Box */
+.cert-decision-box {
+  background: #f0f8f5;
+  border: 1.5px solid #c0e2d8;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 14px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.cert-decision-box.decision-review {
+  background: #fff9ed;
+  border-color: #f1d596;
+}
+
+.cert-decision-main h4 {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #183e4e;
+  margin: 0 0 3px;
+  text-transform: uppercase;
+}
+
+.cert-decision-main p {
+  font-size: 9px;
+  color: #4b666a;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cert-decision-stamp {
+  padding: 7px 14px;
+  border: 2px dashed #1a7f37;
+  border-radius: 6px;
+  color: #1a7f37;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  background: #ffffff;
+}
+
+.cert-decision-stamp.stamp-review {
+  border-color: #b07d1c;
+  color: #b07d1c;
+}
+
+/* Signatures & Verification Section */
+.cert-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.25fr;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #dce7e4;
+}
+
+.cert-sign-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.cert-sign-line {
+  border-bottom: 1px dashed #7a9499;
+  height: 34px;
+  margin-bottom: 5px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+
+.cert-sign-name {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #183e4e;
+}
+
+.cert-sign-role {
+  font-size: 8px;
+  color: #71898e;
+}
+
+.cert-qr-block {
+  border: 1px solid #d5e5e0;
+  background: #fbfdfc;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cert-qr-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 4px;
+  border: 1px solid #d2e4df;
+  background: #ffffff;
+  flex-shrink: 0;
+  display: block;
+}
+
+.cert-hash-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.cert-hash-info small {
+  font-size: 7.5px;
+  color: #72898e;
+  font-family: 'DM Mono', monospace;
+  text-transform: uppercase;
+}
+
+.cert-hash-info code {
+  font-family: 'DM Mono', monospace;
+  font-size: 7.5px;
+  color: #0f7c76;
+  word-break: break-all;
+  line-height: 1.25;
+}
+
+/* Footer / Notice */
+.cert-footer-legal {
+  margin-top: 18px;
+  padding-top: 8px;
+  border-top: 1px solid #e7f0ed;
+  font-size: 8px;
+  color: #8c9e9d;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cert-footer-legal p {
+  margin: 0;
+}
+
+/* ============================================================
+   PRINT MEDIA RULES: Isolate clean A4 Certificate Report
+   ============================================================ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Reset outer shell containers without hiding them */
+  #root,
+  .app-shell,
+  .main-content {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide navigation, header, sidebar and web chrome */
+  .sidebar,
+  .topbar,
+  .workflow-heading,
+  .session-actions,
+  .test-layout,
+  .test-controls,
+  .tabs,
+  .formula-note,
+  .calculation-card,
+  .main-content > footer,
+  .report-modal-header,
+  .help-popover,
+  button,
+  .modal-backdrop:not(.report-modal-overlay),
+  .dashboard-grid,
+  .stat-grid,
+  .page-intro,
+  .view-toolbar,
+  .view-stats,
+  .report-hero,
+  .search-hero {
+    display: none !important;
+  }
+
+  /* Expand Modal to fill print page cleanly */
+  .report-modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+  }
+
+  .report-modal-content {
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    animation: none !important;
+  }
+
+  .printable-certificate {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #111111 !important;
+    box-sizing: border-box !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .cert-header {
+    border-bottom: 2px solid #183e4e !important;
+  }
+
+  .cert-table th {
+    background: #eef5f3 !important;
+    color: #183e4e !important;
+    border-color: #cbded9 !important;
+  }
+
+  .cert-table td {
+    border-color: #e7f0ed !important;
+    color: #183e4e !important;
+  }
+
+  .cert-decision-box {
+    background: #f0f8f5 !important;
+    border-color: #c0e2d8 !important;
+  }
+
+  .cert-decision-stamp {
+    border: 2px dashed #1a7f37 !important;
+    color: #1a7f37 !important;
+    background: #ffffff !important;
+  }
+}

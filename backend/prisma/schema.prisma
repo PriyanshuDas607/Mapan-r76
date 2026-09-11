@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password_hash String
+  roles         String[] // e.g. ["LAB_ADMIN", "OPERATOR"]
+  created_at    DateTime       @default(now())
+  active        Boolean        @default(true)
+  // relations
+  instruments   Instruments[]
+  test_sessions TestSessions[]
+  reports       Reports[]
+}
+
+model Instruments {
+  id                   String         @id @default(uuid())
+  labId                String
+  serialNumber         String
+  manufacturer         String?
+  model                String?
+  accuracyClass        String         @default("III") // I | II | III | IIII
+  maxCapacity          Float?
+  verificationInterval Float?
+  calibrationDate      DateTime?
+  metadata             Json?
+  registeredByUserId   String?
+  registeredBy         Users?         @relation(fields: [registeredByUserId], references: [id])
+  // relations
+  test_sessions        TestSessions[]
+
+  @@map("Instruments")
+}
+
+model TestSessions {
+  id           String         @id @default(uuid())
+  instrumentId String
+  operatorId   String
+  startedAt    DateTime       @default(now())
+  endedAt      DateTime?
+  status       String         @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED | CANCELLED
+  // relations
+  observations Observations[]
+  calculation  Calculations?
+  instrument   Instruments    @relation(fields: [instrumentId], references: [id])
+  operator     Users          @relation(fields: [operatorId], references: [id])
+}
+
+model Observations {
+  id          String       @id @default(uuid())
+  sessionId   String
+  data        Json
+  recordedAt  DateTime     @default(now())
+  testSession TestSessions @relation(fields: [sessionId], references: [id])
+}
+
+model Calculations {
+  id            String       @id @default(uuid())
+  sessionId     String       @unique
+  engineVersion String
+  result        Json
+  hash          String // SHA-256 hex of result JSON (immutable fingerprint)
+  createdAt     DateTime     @default(now())
+  // relations
+  testSession   TestSessions @relation(fields: [sessionId], references: [id])
+  reports       Reports[]
+}
+
+model Reports {
+  id            String       @id @default(uuid())
+  calculationId String
+  version       Int          @default(1)
+  status        String       @default("PENDING") // PENDING | APPROVED | SUPERSEDED | REVOKED
+  pdfKey        String? // relative file path or S3 key
+  sha256        String? // SHA-256 hex of the PDF bytes
+  qrPayload     String? // JSON string: { reportId, sha256, verificationUrl }
+  signedAt      DateTime?
+  signerUserId  String?
+  createdAt     DateTime     @default(now())
+  // relations
+  calculation   Calculations @relation(fields: [calculationId], references: [id])
+  signerUser    Users?       @relation(fields: [signerUserId], references: [id])
+}
+
+model AuditLog {
+  id           BigInt   @id @default(autoincrement())
+  eventTime    DateTime @default(now())
+  userId       String?
+  action       String // e.g. INSTRUMENT_REGISTERED, SESSION_STARTED, ...
+  resourceType String?
+  resourceId   String?
+  ipAddress    String?
+  userAgent    String?
+  eventData    Json? // full event payload for chain hashing
+  prevHash     String? // hex of previous entry's currHash
+  currHash     String // hex: SHA256(prevHash + JSON.stringify(eventData))
+}
