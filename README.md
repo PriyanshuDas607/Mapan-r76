@@ -176,7 +176,3 @@ graph TD
 - **Project**: Mapan (Legal Metrology OS)
 
 ---
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
