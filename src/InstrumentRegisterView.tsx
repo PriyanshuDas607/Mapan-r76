@@ -11,6 +11,9 @@ export type Instrument = {
   max: string
   interval: string
   location: string
+  createdBy?: string
+  createdByName?: string
+  userEmail?: string
 }
 
 type Props = {
@@ -184,6 +187,7 @@ export default function InstrumentRegisterView({
                   <th>Capacity</th>
                   <th>Status</th>
                   <th>Location</th>
+                  {userRole === 'ADMIN' && <th>Registered By</th>}
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -209,6 +213,18 @@ export default function InstrumentRegisterView({
                       </span>
                     </td>
                     <td>{item.location || 'Not specified'}</td>
+                    {userRole === 'ADMIN' && (
+                      <td>
+                        <strong style={{ fontSize: '11px', color: '#183e4e' }}>
+                          {item.createdByName || 'Administrator'}
+                        </strong>
+                        {item.userEmail && (
+                          <small style={{ display: 'block', fontSize: '10px', color: '#668087' }}>
+                            {item.userEmail}
+                          </small>
+                        )}
+                      </td>
+                    )}
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <button

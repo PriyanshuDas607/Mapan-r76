@@ -30,6 +30,8 @@ export type ReportData = {
   issueDate: string
   issueTime: string
   technicianName: string
+  userId?: string
+  userEmail?: string
   approverName: string
   temperature: string
   humidity: string

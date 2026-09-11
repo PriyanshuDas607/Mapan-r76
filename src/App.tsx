@@ -57,6 +57,8 @@ export type AuditEvent = {
   id: string
   timestamp: string
   actor: string
+  userId?: string
+  userEmail?: string
   action: string
   target: string
   hash: string
@@ -87,11 +89,52 @@ export default function App() {
     })
   }, [])
 
+  const isAdmin = currentUser?.role === 'ADMIN'
+
+  // User Data Isolation: Regular users only see their own data, Admins see all
+  const visibleInstruments = useMemo(() => {
+    if (!currentUser) return []
+    if (isAdmin) return instruments
+    return instruments.filter(
+      (i) =>
+        !i.createdBy ||
+        i.createdBy === currentUser.id ||
+        i.userEmail === currentUser.email ||
+        i.createdByName === currentUser.name
+    )
+  }, [instruments, currentUser, isAdmin])
+
+  const visibleReports = useMemo(() => {
+    if (!currentUser) return []
+    if (isAdmin) return reports
+    return reports.filter(
+      (r) =>
+        !r.userId ||
+        r.userId === currentUser.id ||
+        r.userEmail === currentUser.email ||
+        r.technicianName === currentUser.name
+    )
+  }, [reports, currentUser, isAdmin])
+
+  const visibleAuditEvents = useMemo(() => {
+    if (!currentUser) return []
+    if (isAdmin) return auditEvents
+    return auditEvents.filter(
+      (e) =>
+        e.userId === currentUser.id ||
+        e.userEmail === currentUser.email ||
+        e.actor === currentUser.name ||
+        (!e.userId && e.actor?.toLowerCase().includes(currentUser.name.toLowerCase()))
+    )
+  }, [auditEvents, currentUser, isAdmin])
+
   const navigate = (next: string) => setPage(next as Page)
 
   // Add audit event helper
   const addAuditEvent = async (action: string, target: string, actorName?: string) => {
     const actor = actorName || currentUser?.name || 'System'
+    const userId = currentUser?.id
+    const userEmail = currentUser?.email
     const now = new Date()
     const timestamp =
       now.toLocaleDateString('en-GB', {
@@ -106,6 +149,7 @@ export default function App() {
       action,
       target,
       actor,
+      userId,
       timestamp,
       random: Math.random(),
     })
@@ -114,6 +158,8 @@ export default function App() {
       id: `EVT-${Date.now()}`,
       timestamp,
       actor,
+      userId,
+      userEmail,
       action,
       target,
       hash: hash.slice(0, 16) + '...',
@@ -139,9 +185,15 @@ export default function App() {
 
   // Instrument CRUD
   const handleAddInstrument = (newInst: Instrument) => {
-    setInstruments((prev) => [newInst, ...prev])
-    setSelectedInstrument(newInst)
-    syncInstrumentToFirestore(newInst)
+    const instWithUser: Instrument = {
+      ...newInst,
+      createdBy: currentUser?.id,
+      createdByName: currentUser?.name,
+      userEmail: currentUser?.email,
+    }
+    setInstruments((prev) => [instWithUser, ...prev])
+    setSelectedInstrument(instWithUser)
+    syncInstrumentToFirestore(instWithUser)
     addAuditEvent('REGISTER_INSTRUMENT', `Registered instrument ${newInst.model} (${newInst.serial})`)
   }
 
@@ -173,11 +225,17 @@ export default function App() {
 
   // Report CRUD
   const handleSaveReport = (newReport: ReportData) => {
-    setReports((prev) => [newReport, ...prev.filter((r) => r.reportNumber !== newReport.reportNumber)])
-    syncReportToFirestore(newReport)
+    const reportWithUser: ReportData = {
+      ...newReport,
+      userId: currentUser?.id,
+      userEmail: currentUser?.email,
+      technicianName: currentUser?.name || newReport.technicianName,
+    }
+    setReports((prev) => [reportWithUser, ...prev.filter((r) => r.reportNumber !== reportWithUser.reportNumber)])
+    syncReportToFirestore(reportWithUser)
     addAuditEvent(
       'SEAL_CERTIFICATE',
-      `Sealed official certificate #${newReport.reportNumber} for ${newReport.instrument.serial}`
+      `Sealed official certificate #${reportWithUser.reportNumber} for ${reportWithUser.instrument.serial}`
     )
   }
 
@@ -188,8 +246,6 @@ export default function App() {
   }
 
   if (!currentUser) return <LoginView onLogin={handleLogin} />
-
-  const isAdmin = currentUser.role === 'ADMIN'
 
   return (
     <div className="app-shell">
@@ -256,15 +312,15 @@ export default function App() {
           <Dashboard
             navigate={navigate}
             currentUser={currentUser}
-            instrumentsCount={instruments.length}
-            reportsCount={reports.length}
-            auditCount={auditEvents.length}
+            instrumentsCount={visibleInstruments.length}
+            reportsCount={visibleReports.length}
+            auditCount={visibleAuditEvents.length}
           />
         )}
 
         {page === 'Instruments' && (
           <InstrumentRegisterView
-            instruments={instruments}
+            instruments={visibleInstruments}
             userRole={currentUser.role}
             onAddInstrument={handleAddInstrument}
             onUpdateInstrument={handleUpdateInstrument}
@@ -280,7 +336,7 @@ export default function App() {
         {page === 'Test sessions' && (
           <PrecisionTestWorkspace
             userName={currentUser.name}
-            instruments={instruments}
+            instruments={visibleInstruments}
             selectedInstrument={selectedInstrument}
             onSelectInstrument={setSelectedInstrument}
             onSaveReport={handleSaveReport}
@@ -292,7 +348,7 @@ export default function App() {
           <ReportsView
             navigate={navigate}
             userRole={currentUser.role}
-            reports={reports}
+            reports={visibleReports}
             onViewReport={(rep) => setSelectedReport(rep)}
             onDeleteReport={handleDeleteReport}
           />
@@ -300,15 +356,21 @@ export default function App() {
 
         {page === 'Search' && (
           <SearchView
-            instruments={instruments}
-            reports={reports}
-            auditEvents={auditEvents}
+            instruments={visibleInstruments}
+            reports={visibleReports}
+            auditEvents={visibleAuditEvents}
             onViewReport={(rep) => setSelectedReport(rep)}
             navigate={navigate}
           />
         )}
 
-        {page === 'Audit trail' && <AuditView auditEvents={auditEvents} />}
+        {page === 'Audit trail' && (
+          <AuditView
+            auditEvents={auditEvents}
+            userRole={currentUser.role}
+            currentUser={currentUser}
+          />
+        )}
 
         {page === 'Users' && isAdmin && (
           <UserManagementView
@@ -872,21 +934,121 @@ function SearchView({
   )
 }
 
-function AuditView({ auditEvents }: { auditEvents: AuditEvent[] }) {
+function AuditView({
+  auditEvents,
+  userRole,
+  currentUser,
+}: {
+  auditEvents: AuditEvent[]
+  userRole: 'ADMIN' | 'OPERATOR'
+  currentUser: User
+}) {
+  const [selectedActorFilter, setSelectedActorFilter] = useState<string>('ALL')
+  const isAdmin = userRole === 'ADMIN'
+
+  // Extract unique actors for admin filter
+  const uniqueActors = useMemo(() => {
+    const actors = Array.from(new Set(auditEvents.map((e) => e.actor).filter(Boolean)))
+    return actors
+  }, [auditEvents])
+
+  // Filter events strictly: regular users only see their own audits; admins see all (or filtered)
+  const displayedEvents = useMemo(() => {
+    if (!isAdmin) {
+      return auditEvents.filter(
+        (e) =>
+          e.userId === currentUser.id ||
+          e.userEmail === currentUser.email ||
+          e.actor === currentUser.name ||
+          (!e.userId && e.actor?.toLowerCase().includes(currentUser.name.toLowerCase()))
+      )
+    }
+    if (selectedActorFilter === 'ALL') return auditEvents
+    return auditEvents.filter((e) => e.actor === selectedActorFilter)
+  }, [auditEvents, isAdmin, currentUser, selectedActorFilter])
+
   return (
     <>
       <PageIntro
         eyebrow="COMPLIANCE RECORD"
         title="Audit trail"
-        description="Every instrument registration, test observation, and certificate seal is cryptographically logged."
+        description={
+          isAdmin
+            ? 'Supervisory cryptographic audit log — Viewing organization-wide actions from all metrologists and administrators.'
+            : `Personal compliance trail — Cryptographically tracking all actions performed by ${currentUser.name}.`
+        }
       />
+
+      {/* Role-specific Notice Banner */}
+      <div
+        style={{
+          margin: '0 4.3% 16px',
+          padding: '12px 18px',
+          borderRadius: '8px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: isAdmin ? '#f0f7ff' : '#f0fdf4',
+          border: `1px solid ${isAdmin ? '#b9dcff' : '#bbf7d0'}`,
+          fontSize: '12.5px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '15px' }}>{isAdmin ? '🛡️' : '🔒'}</span>
+          <span>
+            {isAdmin ? (
+              <>
+                <strong>Administrator Supervisory View:</strong> Showing system-wide logs from all personnel (
+                {auditEvents.length} total events).
+              </>
+            ) : (
+              <>
+                <strong>Personal Audit Isolation Active:</strong> Only showing records performed by your account (
+                <strong>{currentUser.name}</strong>).
+              </>
+            )}
+          </span>
+        </div>
+
+        {isAdmin && uniqueActors.length > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1b64b3' }}>
+              Filter Personnel:
+            </label>
+            <select
+              value={selectedActorFilter}
+              onChange={(e) => setSelectedActorFilter(e.target.value)}
+              style={{
+                padding: '4px 10px',
+                fontSize: '12px',
+                borderRadius: '5px',
+                border: '1px solid #c9e2ff',
+                background: '#fff',
+                color: '#183e4e',
+                fontWeight: 600,
+              }}
+            >
+              <option value="ALL">All Personnel ({auditEvents.length})</option>
+              {uniqueActors.map((actor) => {
+                const count = auditEvents.filter((e) => e.actor === actor).length
+                return (
+                  <option key={actor} value={actor}>
+                    {actor} ({count} event{count !== 1 ? 's' : ''})
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+        )}
+      </div>
+
       <section className="audit-summary">
         <div>
-          <strong>{auditEvents.length}</strong>
-          <span>Events recorded</span>
+          <strong>{displayedEvents.length}</strong>
+          <span>{isAdmin ? 'Visible events' : 'My actions recorded'}</span>
         </div>
         <div>
-          <strong>{auditEvents.length > 0 ? 'Verified' : 'Ready'}</strong>
+          <strong>{displayedEvents.length > 0 ? 'Verified' : 'Ready'}</strong>
           <span>Hash chain status</span>
         </div>
         <div>
@@ -894,29 +1056,41 @@ function AuditView({ auditEvents }: { auditEvents: AuditEvent[] }) {
           <span>Seal algorithm</span>
         </div>
         <div className="chain-ok">
-          ✓ <span>Chain intact<br /><small>{auditEvents.length > 0 ? 'Live tamper-evident audit' : 'Awaiting user action'}</small></span>
+          ✓{' '}
+          <span>
+            Chain intact
+            <br />
+            <small>
+              {displayedEvents.length > 0 ? 'Live tamper-evident audit' : 'Awaiting user action'}
+            </small>
+          </span>
         </div>
       </section>
 
-      {auditEvents.length > 0 ? (
+      {displayedEvents.length > 0 ? (
         <section className="panel full-table" style={{ marginTop: '16px' }}>
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
                   <th>Timestamp</th>
-                  <th>Actor</th>
+                  <th>Actor / Personnel</th>
                   <th>Action</th>
                   <th>Entity / Target</th>
                   <th>SHA-256 Digest</th>
                 </tr>
               </thead>
               <tbody>
-                {auditEvents.map((evt) => (
+                {displayedEvents.map((evt) => (
                   <tr key={evt.id}>
                     <td>{evt.timestamp}</td>
                     <td>
-                      <strong>{evt.actor}</strong>
+                      <strong style={{ color: '#183e4e' }}>{evt.actor}</strong>
+                      {evt.userEmail && (
+                        <small style={{ display: 'block', fontSize: '10.5px', color: '#668087' }}>
+                          {evt.userEmail}
+                        </small>
+                      )}
                     </td>
                     <td>
                       <span className="audit-action">{evt.action}</span>
@@ -932,8 +1106,12 @@ function AuditView({ auditEvents }: { auditEvents: AuditEvent[] }) {
       ) : (
         <div className="empty-state">
           <span>◷</span>
-          <h2>No audit events recorded yet</h2>
-          <p>Actions from instrument registration, test sessions, and report sealing will appear here with cryptographic hashes.</p>
+          <h2>No audit events found</h2>
+          <p>
+            {isAdmin
+              ? 'No audit events recorded for the selected filter.'
+              : 'Actions you perform (registering instruments, conducting test sessions, sealing certificates) will appear in your personal audit trail with cryptographic hashes.'}
+          </p>
         </div>
       )}
     </>
