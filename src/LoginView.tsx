@@ -16,10 +16,11 @@ export default function LoginView({ onLogin }: Props) {
   const [password, setPassword] = useState('')
   const [jobTitle, setJobTitle] = useState('Laboratory Metrologist / Verification Officer')
   const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
-  const handleSignIn = (e: FormEvent) => {
+  const handleSignIn = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
     setSuccessMsg('')
@@ -28,16 +29,26 @@ export default function LoginView({ onLogin }: Props) {
       return
     }
 
-    const res = authenticateUser(email, password)
-    if (!res.success || !res.user) {
-      setError(res.error || 'Authentication failed.')
-      return
-    }
+    setLoading(true)
+    try {
+      const res = await authenticateUser(email, password)
+      if (!res.success || !res.user) {
+        setError(res.error || 'Authentication failed.')
+        setLoading(false)
+        return
+      }
 
-    onLogin(res.user)
+      setSuccessMsg('Authenticated! Signing in...')
+      setTimeout(() => {
+        onLogin(res.user!)
+      }, 300)
+    } catch {
+      setError('An error occurred during authentication. Please try again.')
+      setLoading(false)
+    }
   }
 
-  const handleSignUp = (e: FormEvent) => {
+  const handleSignUp = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
     setSuccessMsg('')
@@ -56,17 +67,24 @@ export default function LoginView({ onLogin }: Props) {
       return
     }
 
-    // Normal public user creation registers strictly as an Operator
-    const res = registerNewUser(name, email, password, jobTitle)
-    if (!res.success || !res.user) {
-      setError(res.error || 'Registration failed.')
-      return
-    }
+    setLoading(true)
+    try {
+      // Normal public user creation registers strictly as an Operator
+      const res = await registerNewUser(name, email, password, jobTitle)
+      if (!res.success || !res.user) {
+        setError(res.error || 'Registration failed.')
+        setLoading(false)
+        return
+      }
 
-    setSuccessMsg('Personnel account registered successfully! Signing in...')
-    setTimeout(() => {
-      onLogin(res.user!)
-    }, 600)
+      setSuccessMsg('Personnel account registered successfully! Signing in...')
+      setTimeout(() => {
+        onLogin(res.user!)
+      }, 600)
+    } catch {
+      setError('Failed to create account. Please try again.')
+      setLoading(false)
+    }
   }
 
   return (
@@ -223,8 +241,8 @@ export default function LoginView({ onLogin }: Props) {
               {error && <div className="login-error">! {error}</div>}
               {successMsg && <div style={{ color: '#1a7f37', fontSize: '11px', margin: '8px 0', fontWeight: 700 }}>✓ {successMsg}</div>}
 
-              <button className="login-submit" type="submit">
-                Sign in to Workspace <ArrowRight size={16} />
+              <button className="login-submit" type="submit" disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
+                {loading ? 'Authenticating...' : 'Sign in to Workspace'} <ArrowRight size={16} />
               </button>
             </form>
           ) : (
@@ -307,8 +325,8 @@ export default function LoginView({ onLogin }: Props) {
               {error && <div className="login-error">! {error}</div>}
               {successMsg && <div style={{ color: '#1a7f37', fontSize: '11px', margin: '8px 0', fontWeight: 700 }}>✓ {successMsg}</div>}
 
-              <button className="login-submit" type="submit" style={{ marginTop: '12px' }}>
-                Create Account & Sign In <ArrowRight size={16} />
+              <button className="login-submit" type="submit" disabled={loading} style={{ marginTop: '12px', opacity: loading ? 0.7 : 1 }}>
+                {loading ? 'Registering...' : 'Create Account & Sign In'} <ArrowRight size={16} />
               </button>
             </form>
           )}

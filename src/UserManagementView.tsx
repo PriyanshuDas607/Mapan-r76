@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   UserPlus,
   Search,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import {
   getStoredUsers,
+  loadUsersFromFirestore,
   adminCreateUser,
   updateUser,
   deleteUser,
@@ -31,6 +32,13 @@ export default function UserManagementView({
   const [openAddModal, setOpenAddModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
 
+  // Load from Firestore on mount
+  useEffect(() => {
+    loadUsersFromFirestore().then((cloudUsers) => {
+      if (cloudUsers.length > 0) setUsers(cloudUsers)
+    })
+  }, [])
+
   // Add User Form State
   const [formName, setFormName] = useState('')
   const [formEmail, setFormEmail] = useState('')
@@ -40,16 +48,18 @@ export default function UserManagementView({
   const [error, setError] = useState('')
 
   const refreshUsers = () => {
-    setUsers(getStoredUsers())
+    loadUsersFromFirestore().then((cloudUsers) => {
+      setUsers(cloudUsers)
+    })
   }
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!formName.trim() || !formEmail.trim() || !formPassword) {
       setError('Name, email, and password are required.')
       return
     }
 
-    const res = adminCreateUser(formName, formEmail, formPassword, formRole, formDept)
+    const res = await adminCreateUser(formName, formEmail, formPassword, formRole, formDept)
     if (!res.success || !res.user) {
       setError(res.error || 'Failed to create user.')
       return

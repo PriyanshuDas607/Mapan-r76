@@ -1,4 +1,4 @@
-import { db, doc, setDoc, deleteDoc } from './firebase'
+import { db, doc, setDoc, deleteDoc, getDocs, collection } from './firebase'
 
 export type UserRole = 'ADMIN' | 'OPERATOR'
 
@@ -51,25 +51,26 @@ const DEFAULT_USERS: User[] = [
 ]
 
 // Sync user to Firestore in background
-async function syncUserToFirestore(user: User) {
+export async function syncUserToFirestore(user: User) {
   try {
     const userRef = doc(db, 'users', user.id)
     await setDoc(userRef, {
       id: user.id,
       name: user.name,
-      email: user.email,
+      email: user.email.toLowerCase().trim(),
       passwordHash: user.passwordHash,
+      password: user.passwordHash, // compatibility
       role: user.role,
-      active: user.active,
-      laboratory: user.laboratory,
-      department: user.department,
+      active: user.active ?? true,
+      laboratory: user.laboratory || 'Central Standards Laboratory',
+      department: user.department || 'Precision Calibration Division',
       jobTitle: user.jobTitle || 'Metrologist',
       phone: user.phone || '',
-      createdAt: user.createdAt,
-      lastLogin: user.lastLogin || '',
+      createdAt: user.createdAt || new Date().toISOString(),
+      lastLogin: user.lastLogin || new Date().toISOString(),
     }, { merge: true })
-  } catch {
-    // Graceful offline fallback
+  } catch (err) {
+    console.warn('Firestore sync user error:', err)
   }
 }
 
@@ -90,6 +91,51 @@ export function getStoredUsers(): User[] {
     return parsed
   } catch {
     return DEFAULT_USERS
+  }
+}
+
+export async function loadUsersFromFirestore(): Promise<User[]> {
+  try {
+    const snapshot = await getDocs(collection(db, 'users'))
+    const list: User[] = []
+    snapshot.forEach((d) => {
+      const data = d.data() as Record<string, unknown>
+      if (data && (data.email || data.name)) {
+        list.push({
+          id: (data.id as string) || d.id,
+          name: (data.name as string) || (data.displayName as string) || 'Personnel',
+          email: ((data.email as string) || '').toLowerCase().trim(),
+          passwordHash:
+            (data.passwordHash as string) ||
+            (data.password as string) ||
+            (data.password_hash as string) ||
+            '',
+          role: data.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR',
+          active: data.active !== false,
+          laboratory: (data.laboratory as string) || 'Central Standards Laboratory',
+          department: (data.department as string) || 'Precision Calibration Division',
+          jobTitle: (data.jobTitle as string) || 'Metrologist',
+          phone: (data.phone as string) || '',
+          createdAt: (data.createdAt as string) || new Date().toISOString(),
+          lastLogin: (data.lastLogin as string) || '',
+        })
+      }
+    })
+
+    if (list.length > 0) {
+      const localUsers = getStoredUsers()
+      const mergedMap = new Map<string, User>()
+      DEFAULT_USERS.forEach((u) => mergedMap.set(u.email.toLowerCase(), u))
+      localUsers.forEach((u) => mergedMap.set(u.email.toLowerCase(), u))
+      list.forEach((u) => mergedMap.set(u.email.toLowerCase(), u))
+      const merged = Array.from(mergedMap.values())
+      saveStoredUsers(merged)
+      return merged
+    }
+    return getStoredUsers()
+  } catch (err) {
+    console.warn('Could not fetch users from Firestore:', err)
+    return getStoredUsers()
   }
 }
 
@@ -125,32 +171,31 @@ export function setCurrentSession(user: User | null) {
 
 /**
  * Public User Registration
- * NOTE: Normal public sign up CANNOT create an ADMIN account.
- * All public registrations are strictly assigned 'OPERATOR' role.
  */
-export function registerNewUser(
+export async function registerNewUser(
   name: string,
   email: string,
   password: string,
   jobTitle = 'Laboratory Metrologist / Verification Officer',
   laboratory = 'Central Standards Laboratory'
-): { success: boolean; error?: string; user?: User } {
-  const users = getStoredUsers()
+): Promise<{ success: boolean; error?: string; user?: User }> {
   const normalizedEmail = email.toLowerCase().trim()
 
   if (!name.trim() || !normalizedEmail || !password) {
     return { success: false, error: 'All fields are required.' }
   }
 
-  if (users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
-    return { success: false, error: 'An account with this email address already exists.' }
-  }
-
   if (password.length < 6) {
     return { success: false, error: 'Password must be at least 6 characters long.' }
   }
 
-  // Public sign-ups are ALWAYS assigned 'OPERATOR' role (never Admin)
+  // Check cloud and local users
+  const currentUsers = await loadUsersFromFirestore()
+  if (currentUsers.some((u) => u.email.toLowerCase() === normalizedEmail)) {
+    return { success: false, error: 'An account with this email address already exists.' }
+  }
+
+  // Public sign-ups are ALWAYS assigned 'OPERATOR' role
   const newUser: User = {
     id: `USR-${Date.now()}`,
     name: name.trim(),
@@ -166,31 +211,31 @@ export function registerNewUser(
     lastLogin: new Date().toISOString(),
   }
 
-  const updated = [newUser, ...users]
+  const updated = [newUser, ...currentUsers.filter((u) => u.email.toLowerCase() !== normalizedEmail)]
   saveStoredUsers(updated)
-  syncUserToFirestore(newUser)
+  await syncUserToFirestore(newUser)
   return { success: true, user: newUser }
 }
 
 /**
  * Admin Personnel Creation (Only called from Admin Console)
  */
-export function adminCreateUser(
+export async function adminCreateUser(
   name: string,
   email: string,
   password: string,
   role: UserRole,
   department = 'Precision Metrology Bay',
   jobTitle = 'Testing Metrologist'
-): { success: boolean; error?: string; user?: User } {
-  const users = getStoredUsers()
+): Promise<{ success: boolean; error?: string; user?: User }> {
   const normalizedEmail = email.toLowerCase().trim()
 
   if (!name.trim() || !normalizedEmail || !password) {
     return { success: false, error: 'Name, email, and password are required.' }
   }
 
-  if (users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
+  const currentUsers = await loadUsersFromFirestore()
+  if (currentUsers.some((u) => u.email.toLowerCase() === normalizedEmail)) {
     return { success: false, error: 'An account with this email already exists.' }
   }
 
@@ -209,34 +254,87 @@ export function adminCreateUser(
     lastLogin: '',
   }
 
-  const updated = [newUser, ...users]
+  const updated = [newUser, ...currentUsers.filter((u) => u.email.toLowerCase() !== normalizedEmail)]
   saveStoredUsers(updated)
-  syncUserToFirestore(newUser)
+  await syncUserToFirestore(newUser)
   return { success: true, user: newUser }
 }
 
-export function authenticateUser(
+/**
+ * Robust Authenticate User with Direct Firestore Query & Local Fallback
+ */
+export async function authenticateUser(
   email: string,
   password: string
-): { success: boolean; error?: string; user?: User } {
-  const users = getStoredUsers()
+): Promise<{ success: boolean; error?: string; user?: User }> {
   const normalizedEmail = email.toLowerCase().trim()
+  const trimmedPassword = password.trim()
 
-  const user = users.find((u) => u.email.toLowerCase() === normalizedEmail)
-  if (!user) {
-    return { success: false, error: 'No account found with this email address.' }
+  // 1. First, check live Firestore cloud records
+  let matchedUser: User | null = null
+
+  try {
+    const snapshot = await getDocs(collection(db, 'users'))
+    snapshot.forEach((d) => {
+      const data = d.data() as Record<string, unknown>
+      const docEmail = ((data?.email as string) || '').toLowerCase().trim()
+      if (docEmail === normalizedEmail) {
+        matchedUser = {
+          id: (data.id as string) || d.id,
+          name: (data.name as string) || (data.displayName as string) || 'Personnel',
+          email: docEmail,
+          passwordHash:
+            (data.passwordHash as string) ||
+            (data.password as string) ||
+            (data.password_hash as string) ||
+            '',
+          role: data.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR',
+          active: data.active !== false,
+          laboratory: (data.laboratory as string) || 'Central Standards Laboratory',
+          department: (data.department as string) || 'Precision Calibration Division',
+          jobTitle: (data.jobTitle as string) || 'Metrologist',
+          phone: (data.phone as string) || '',
+          createdAt: (data.createdAt as string) || new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+        }
+      }
+    })
+  } catch (err) {
+    console.warn('Firestore direct auth query failed, using offline fallback:', err)
   }
 
-  if (!user.active) {
+  // 2. Fallback to local storage if not found in Firestore or Firestore was unreachable
+  if (!matchedUser) {
+    const localUsers = getStoredUsers()
+    const foundLocal = localUsers.find((u) => u.email.toLowerCase() === normalizedEmail)
+    if (foundLocal) {
+      matchedUser = foundLocal
+    }
+  }
+
+  if (!matchedUser) {
+    return { success: false, error: 'No account found with this email address in Firebase or local directory.' }
+  }
+
+  const candidate = matchedUser as User
+
+  if (!candidate.active) {
     return { success: false, error: 'This account has been deactivated by an Administrator.' }
   }
 
-  if (user.passwordHash !== password) {
+  // Check password against stored password or hash
+  if (candidate.passwordHash !== trimmedPassword && candidate.passwordHash !== password) {
     return { success: false, error: 'Incorrect password entered.' }
   }
 
-  const updatedUser: User = { ...user, lastLogin: new Date().toISOString() }
-  const updatedList = users.map((u) => (u.id === user.id ? updatedUser : u))
+  const updatedUser: User = { ...candidate, lastLogin: new Date().toISOString() }
+  
+  // Save to local cache
+  const users = getStoredUsers()
+  const updatedList = users.some((u) => u.id === updatedUser.id)
+    ? users.map((u) => (u.id === updatedUser.id ? updatedUser : u))
+    : [updatedUser, ...users]
+  
   saveStoredUsers(updatedList)
   setCurrentSession(updatedUser)
   syncUserToFirestore(updatedUser)
