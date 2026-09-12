@@ -6,28 +6,24 @@ import type { Instrument } from './InstrumentRegisterView.tsx'
 import { generateSHA256Hash } from '../../backend/cryptoUtils.ts'
 import '../styles/workflow.css'
 
-type Row = { id: number; load: string; indication: string }
+import { evaluateWeighingReading, validateInstrumentClassification, OIML_CLAUSES } from '../../backend/oimlEngine.ts'
+import type { AccuracyClass } from '../../backend/oimlEngine.ts'
 
-function mpeFor(load: number, interval: number, accuracyClass: string) {
-  const n = interval > 0 ? load / interval : 0
-  const first = accuracyClass === 'I' ? 500 : accuracyClass === 'II' ? 2000 : 500
-  const second = accuracyClass === 'I' ? 2000 : accuracyClass === 'II' ? 10000 : 2000
-  return n <= first ? interval * 0.5 : n <= second ? interval : interval * 1.5
-}
+type Row = { id: number; load: string; indication: string }
 
 function calculate(row: Row, interval: number, accuracyClass: string) {
   const load = Number(row.load)
   const indication = Number(row.indication)
   if (!Number.isFinite(load) || !Number.isFinite(indication) || row.load === '' || row.indication === '') {
-    return { error: '—', mpe: '—', result: 'Review' as const }
+    return {
+      error: '—',
+      mpe: '—',
+      result: 'Review' as const,
+      clause: OIML_CLAUSES.MPE_INITIAL.clause,
+      deviationRatio: 0,
+    }
   }
-  const error = indication - load
-  const mpe = mpeFor(load, interval, accuracyClass)
-  return {
-    error: `${error >= 0 ? '+' : ''}${error.toFixed(3)}`,
-    mpe: `±${mpe.toFixed(3)}`,
-    result: Math.abs(error) <= mpe ? ('Pass' as const) : ('Review' as const),
-  }
+  return evaluateWeighingReading(load, indication, interval, accuracyClass as AccuracyClass)
 }
 
 type Props = {
@@ -94,6 +90,11 @@ export default function PrecisionTestWorkspace({
   const interval = Number(instrumentForm.interval) || 0.01
   const accuracyClass = instrumentForm.accuracy || 'I'
   const maxCapacity = instrumentForm.max || '30.00'
+
+  // OIML Clause 3.2 Classification Verification
+  const classificationInfo = useMemo(() => {
+    return validateInstrumentClassification(Number(maxCapacity), interval, accuracyClass)
+  }, [maxCapacity, interval, accuracyClass])
 
   // Environmental & Test Conditions
   const [temperature, setTemperature] = useState('21.4 °C')
@@ -643,16 +644,20 @@ export default function PrecisionTestWorkspace({
           <div className="formula-note">
             <span className="formula-icon">ƒ</span>
             <div>
-              <strong>How precision is checked</strong>
+              <strong>OIML R 76-1:2006 Deterministic Engine</strong>
               <p>
-                Error E = indication I − applied load L. Pass when |E| ≤ MPE. MPE is selected from load/e interval region and accuracy class according to OIML R 76-1.
+                Intrinsic Error: <code>E = I − L</code> (Cl. T.5.5.1). MPE Thresholds (Cl. 3.5.1, Table 6):
+                {accuracyClass === 'I' && ' Class I: ±0.5e (n ≤ 50,000), ±1.0e (50,000 < n ≤ 200,000), ±1.5e (n > 200,000).'}
+                {accuracyClass === 'II' && ' Class II: ±0.5e (n ≤ 5,000), ±1.0e (5,000 < n ≤ 20,000), ±1.5e (n > 20,000).'}
+                {accuracyClass === 'III' && ' Class III: ±0.5e (n ≤ 500), ±1.0e (500 < n ≤ 2,000), ±1.5e (n > 2,000).'}
+                {accuracyClass === 'IIII' && ' Class IIII: ±0.5e (n ≤ 50), ±1.0e (50 < n ≤ 200), ±1.5e (n > 200).'}
               </p>
             </div>
           </div>
         </div>
 
         <aside className="panel calculation-card">
-          <p className="eyebrow">LIVE CALCULATION</p>
+          <p className="eyebrow">LIVE OIML R-76 VERIFICATION</p>
           <h2>Precision result</h2>
           <div className={reviews ? 'result-summary review-summary' : 'result-summary'}>
             <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -664,7 +669,7 @@ export default function PrecisionTestWorkspace({
                 </>
               ) : (
                 <>
-                  <CheckCircle2 size={18} /> PASS
+                  <CheckCircle2 size={18} /> PASS (Cl. 3.5.1)
                 </>
               )}
             </strong>
@@ -673,19 +678,25 @@ export default function PrecisionTestWorkspace({
                 ? 'No observations have been checked'
                 : reviews
                 ? `${reviews} reading${reviews > 1 ? 's' : ''} outside MPE limit`
-                : 'All readings within MPE limits'}
+                : 'All readings conform to OIML R-76 MPE limits'}
             </span>
           </div>
 
           <div className="calculation-list">
             <span>
-              Applied rule <b>OIML R 76-1:2006</b>
+              Standard Rule <b>OIML R 76-1:2006 (E)</b>
             </span>
             <span>
               Class <b>Class {accuracyClass}</b>
             </span>
             <span>
-              Verification interval <b>{interval || '—'} kg</b>
+              Intervals (n = Max/e){' '}
+              <b style={{ color: classificationInfo.nValid ? '#183e4e' : '#c53030' }}>
+                {classificationInfo.n.toLocaleString()} {classificationInfo.nValid ? '(Cl. 3.2 Pass)' : '(! Exceeded)'}
+              </b>
+            </span>
+            <span>
+              MPE Clause <b>Clause 3.5.1 (Table 6)</b>
             </span>
             <span>
               Checked readings{' '}
@@ -696,9 +707,12 @@ export default function PrecisionTestWorkspace({
           </div>
 
           <div className="rule-explainer">
-            <strong>MPE selection criteria</strong>
+            <strong>Clause-by-Clause Verification</strong>
             <p>
-              For Class {accuracyClass}, n = load ÷ e. The first region uses MPE = 0.5e; the second uses 1e; the final region uses 1.5e.
+              • <strong>Cl. 3.2 (Table 3)</strong>: Scale intervals & Min capacity<br />
+              • <strong>Cl. 3.5.1 (Table 6)</strong>: Step-function MPE curve<br />
+              • <strong>Cl. T.5.5.1 & A.4.4.3</strong>: Intrinsic & corrected error trace<br />
+              • <strong>Cl. 5.5.2.2 & 5.5.3</strong>: Cryptographic SHA-256 digital seal
             </p>
           </div>
 

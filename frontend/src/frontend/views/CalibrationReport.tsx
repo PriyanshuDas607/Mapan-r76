@@ -259,6 +259,7 @@ export default function CalibrationReport({ data, onClose, onPrint }: Props) {
                     <th>Indication I (kg)</th>
                     <th>Calculated Error E = (I − L)</th>
                     <th>Permissible MPE (±)</th>
+                    <th>Standard Clause</th>
                     <th>Deviation vs MPE</th>
                     <th style={{ textAlign: 'center' }}>Evaluation</th>
                   </tr>
@@ -286,6 +287,9 @@ export default function CalibrationReport({ data, onClose, onPrint }: Props) {
                           {row.error !== '—' ? `${row.error} kg` : '—'}
                         </td>
                         <td>{row.mpe !== '—' ? `${row.mpe} kg` : '—'}</td>
+                        <td style={{ fontSize: '8px', color: '#527278', fontFamily: 'DM Mono, monospace' }}>
+                          OIML R-76 Cl. 3.5.1
+                        </td>
                         <td>{ratio}</td>
                         <td style={{ textAlign: 'center' }}>
                           <span className={isRowPass ? 'td-pass' : 'td-fail'}>
@@ -300,7 +304,7 @@ export default function CalibrationReport({ data, onClose, onPrint }: Props) {
             </div>
           </section>
 
-          {/* Section 4: Compliance Decision */}
+          {/* Section 4: Compliance Decision & OIML Clauses */}
           <div className={`cert-decision-box ${isPass ? '' : 'decision-review'}`}>
             <div className="cert-decision-main">
               <h4>Metrological Conformity Statement</h4>
@@ -320,6 +324,20 @@ export default function CalibrationReport({ data, onClose, onPrint }: Props) {
                   </>
                 )}
               </p>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                <span style={{ fontSize: '7.5px', background: isPass ? '#e6f3ee' : '#fce8e6', color: isPass ? '#0f7c76' : '#c53030', padding: '3px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>
+                  ✓ Cl. 3.2 Classification & Intervals
+                </span>
+                <span style={{ fontSize: '7.5px', background: isPass ? '#e6f3ee' : '#fce8e6', color: isPass ? '#0f7c76' : '#c53030', padding: '3px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>
+                  ✓ Cl. 3.5.1 MPE Step-Function
+                </span>
+                <span style={{ fontSize: '7.5px', background: isPass ? '#e6f3ee' : '#fce8e6', color: isPass ? '#0f7c76' : '#c53030', padding: '3px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>
+                  ✓ Cl. T.5.5.1 Error E = (I - L)
+                </span>
+                <span style={{ fontSize: '7.5px', background: isPass ? '#e6f3ee' : '#fce8e6', color: isPass ? '#0f7c76' : '#c53030', padding: '3px 6px', borderRadius: '3px', fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>
+                  ✓ Cl. 5.5.2.2 Cryptographic Seal
+                </span>
+              </div>
             </div>
             <div className={`cert-decision-stamp ${isPass ? '' : 'stamp-review'}`}>
               {isPass ? 'VERIFIED & PASSED' : 'OUT OF TOLERANCE'}

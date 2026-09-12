@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
+    "test:oiml": "ts-node-dev --transpile-only src/tests/oimlR76.test.ts",
     "start": "node dist/index.js",
     "lint": "eslint . --ext .ts",
     "prisma:generate": "prisma generate",

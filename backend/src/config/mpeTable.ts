@@ -1,142 +1,131 @@
 /**
- * OIML R-76 Official MPE Table Configuration
- * Source: OIML R 76-1 (2006) – Non-automatic weighing instruments
- *
- * Classes: I, II, III, IIII
- * Regions: load-based on verification scale intervals (n = L / e)
- *
- * MPE values are expressed in multiples of verification interval (e).
- * E.g., 0.5e = half a verification interval.
+ * OIML R 76-1:2006 (E) Authoritative Deterministic Calculation & Clause Mapping Engine
+ * Standard: Non-automatic weighing instruments - Metrological and technical requirements - Tests
  */
 
 export type AccuracyClass = 'I' | 'II' | 'III' | 'IIII';
+export type VerificationType = 'INITIAL' | 'SERVICE';
 export type Region = 'low' | 'mid' | 'high';
 
-/**
- * OIML R-76 Table 1 – Maximum Permissible Errors (MPE)
- * Values are in multiples of verification interval (e)
- *
- * Region thresholds by class (in number of verification intervals n = L/e):
- *
- * Class I   : low = 0–50000, mid = 50000–200000, high = >200000
- * Class II  : low = 0–5000,  mid = 5000–20000,   high = >20000
- * Class III : low = 0–500,   mid = 500–2000,      high = >2000
- * Class IIII: low = 0–50,    mid = 50–200,        high = >200
- *
- * MPE:
- *   low  → ±0.5e
- *   mid  → ±1.0e
- *   high → ±1.5e
- *
- * (Same MPE multiplier across all classes; differs in region thresholds)
- */
+export const OIML_CLAUSES = {
+  CLASSIFICATION: {
+    clause: 'OIML R 76-1 Cl. 3.2 (Table 3)',
+    title: 'Classification of instruments',
+    description: 'Verifies scale intervals (e), number of intervals (n = Max/e), and minimum capacity (Min).',
+  },
+  MPE_INITIAL: {
+    clause: 'OIML R 76-1 Cl. 3.5.1 (Table 6)',
+    title: 'Maximum permissible errors on initial verification',
+    description: 'Step-function MPE thresholds (±0.5e, ±1.0e, ±1.5e) for test loads.',
+  },
+  MPE_SERVICE: {
+    clause: 'OIML R 76-1 Cl. 3.5.2',
+    title: 'Maximum permissible errors in service',
+    description: 'In-service MPE equals twice the initial verification MPE (2 × MPE).',
+  },
+  ERROR_EVALUATION: {
+    clause: 'OIML R 76-1 Cl. T.5.5.1 & Cl. A.4.4.3',
+    title: 'Determination of weighing error and corrected error',
+    description: 'Computes intrinsic error E = I - L and corrected error Ec = E - E0.',
+  },
+  REPEATABILITY: {
+    clause: 'OIML R 76-1 Cl. 3.6.1 & Cl. A.4.10',
+    title: 'Repeatability requirement',
+    description: 'Difference between results of several weighings of the same load <= |MPE|.',
+  },
+  ECCENTRICITY: {
+    clause: 'OIML R 76-1 Cl. 3.6.2 & Cl. A.4.7',
+    title: 'Eccentric loading requirement',
+    description: 'Indications for eccentric positions (1/3 Max) must meet MPE for applied load.',
+  },
+  ZERO_SETTING_ACCURACY: {
+    clause: 'OIML R 76-1 Cl. 4.5.2 & Cl. A.4.2.3',
+    title: 'Accuracy of zero-setting device',
+    description: 'Effect of zero deviation on weighing results shall not exceed ±0.25e.',
+  },
+  TARE_ACCURACY: {
+    clause: 'OIML R 76-1 Cl. 4.6.3 & Cl. A.4.6.2',
+    title: 'Accuracy of tare setting device',
+    description: 'Tare device setting to zero must be within ±0.25e for electronic instruments.',
+  },
+  DISCRIMINATION: {
+    clause: 'OIML R 76-1 Cl. 3.8.2.2 & Cl. A.4.8.2',
+    title: 'Discrimination for digital indication',
+    description: 'Additional load equal to 1.4d shall unambiguously change the indication (d >= 5 mg).',
+  },
+  OVERLOAD_LIMIT: {
+    clause: 'OIML R 76-1 Cl. 4.2.3',
+    title: 'Limits of indication (Overload)',
+    description: 'No indication above Max + 9e is permissible.',
+  },
+} as const;
+
 export const MPE_MULTIPLIER: Record<Region, number> = {
-  low: 0.5,   // ±0.5e
-  mid: 1.0,   // ±1.0e
-  high: 1.5,  // ±1.5e
+  low: 0.5,
+  mid: 1.0,
+  high: 1.5,
 };
 
-/**
- * Region thresholds in terms of number of verification scale intervals (n = L / e)
- * Where L = Applied Load, e = Verification Interval
- *
- * Returns [lowUpperBound, midUpperBound] in n units.
- * If n < lowUpper → low region
- * If n < midUpper → mid region
- * Else → high region
- */
 export const REGION_THRESHOLDS: Record<AccuracyClass, [number, number]> = {
-  I:    [50000,  200000],
-  II:   [5000,   20000],
-  III:  [500,    2000],
-  IIII: [50,     200],
+  I:    [50000, 200000],
+  II:   [5000,  20000],
+  III:  [500,   2000],
+  IIII: [50,    200],
 };
 
-/**
- * Minimum verification intervals (e) per class per OIML R-76 Table 2
- * Class I   : e ≥ 1 mg
- * Class II  : e ≥ 1 mg (if Max ≤ 100g) else e ≥ 0.1 g
- * Class III : e ≥ 0.1 g
- * Class IIII: e ≥ 5 g
- */
-export const MIN_VERIFICATION_INTERVAL: Record<AccuracyClass, number> = {
-  I:    0.000001, // 1 µg (in kg)
-  II:   0.000001, // 1 mg
-  III:  0.0001,   // 0.1 g
-  IIII: 0.005,    // 5 g
-};
-
-/**
- * Minimum/Maximum number of verification scale intervals per class
- * Source: OIML R-76-1 Table 2
- *
- * [minN, maxN]
- */
 export const VERIFICATION_SCALE_INTERVAL_LIMITS: Record<AccuracyClass, [number, number]> = {
-  I:    [50000,   Infinity],
-  II:   [100,     100000],
-  III:  [100,     10000],
-  IIII: [100,     1000],
+  I:    [50000, Infinity],
+  II:   [100,   100000],
+  III:  [100,   10000],
+  IIII: [100,   1000],
 };
 
-/**
- * Determine the load region based on n = L / e (number of verification intervals).
- */
 export function getRegion(
   appliedLoad: number,
   verificationInterval: number,
   accuracyClass: AccuracyClass,
 ): Region {
-  const n = appliedLoad / verificationInterval;
-  const [lowUpper, midUpper] = REGION_THRESHOLDS[accuracyClass];
+  const n = verificationInterval > 0 ? appliedLoad / verificationInterval : 0;
+  const [lowUpper, midUpper] = REGION_THRESHOLDS[accuracyClass] || REGION_THRESHOLDS['III'];
   if (n <= lowUpper) return 'low';
   if (n <= midUpper) return 'mid';
   return 'high';
 }
 
-/**
- * Calculate n (number of verification scale intervals).
- * n = Max Capacity / e
- */
 export function calculateN(maxCapacity: number, verificationInterval: number): number {
-  return maxCapacity / verificationInterval;
+  return verificationInterval > 0 ? maxCapacity / verificationInterval : 0;
 }
 
-/**
- * Validate that n is within the permissible range for the given class.
- */
 export function validateN(
   n: number,
   accuracyClass: AccuracyClass,
-): { valid: boolean; message?: string } {
-  const [minN, maxN] = VERIFICATION_SCALE_INTERVAL_LIMITS[accuracyClass];
+): { valid: boolean; message?: string; clause: string } {
+  const [minN, maxN] = VERIFICATION_SCALE_INTERVAL_LIMITS[accuracyClass] || VERIFICATION_SCALE_INTERVAL_LIMITS['III'];
   if (n < minN) {
     return {
       valid: false,
       message: `n (${n}) is below minimum (${minN}) for Class ${accuracyClass}`,
+      clause: OIML_CLAUSES.CLASSIFICATION.clause,
     };
   }
   if (n > maxN) {
     return {
       valid: false,
       message: `n (${n}) exceeds maximum (${maxN}) for Class ${accuracyClass}`,
+      clause: OIML_CLAUSES.CLASSIFICATION.clause,
     };
   }
-  return { valid: true };
+  return { valid: true, clause: OIML_CLAUSES.CLASSIFICATION.clause };
 }
 
-/**
- * Lookup MPE in absolute units (kg or gram – same unit as e).
- *
- * Formula: MPE = multiplier × e
- *   where multiplier ∈ {0.5, 1.0, 1.5} based on region
- */
 export function lookupMPE(
   accuracyClass: AccuracyClass,
   appliedLoad: number,
   verificationInterval: number,
+  verificationType: VerificationType = 'INITIAL'
 ): number {
   const region = getRegion(appliedLoad, verificationInterval, accuracyClass);
-  const multiplier = MPE_MULTIPLIER[region];
+  const baseMultiplier = MPE_MULTIPLIER[region];
+  const multiplier = verificationType === 'SERVICE' ? baseMultiplier * 2 : baseMultiplier;
   return multiplier * verificationInterval;
 }

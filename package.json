@@ -11,6 +11,7 @@
     "build": "npm --prefix frontend run build",
     "preview": "npm --prefix frontend run preview",
     "lint": "npm --prefix frontend run lint",
+    "test:oiml": "npm --prefix backend run test:oiml",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:build": "npm --prefix frontend run build",
     "backend:dev": "npm --prefix backend run dev",
