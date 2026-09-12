@@ -7,6 +7,8 @@ import {
   Edit2,
   Trash2,
   RotateCcw,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import {
   getStoredUsers,
@@ -33,6 +35,9 @@ export default function UserManagementView({
   const [roleFilter, setRoleFilter] = useState<string>('ALL')
   const [openAddModal, setOpenAddModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [showEditPassword, setShowEditPassword] = useState(false)
+  const [showAddPassword, setShowAddPassword] = useState(false)
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({})
   const [purging, setPurging] = useState(false)
 
   // Load from Firestore on mount
@@ -48,12 +53,20 @@ export default function UserManagementView({
   const [formPassword, setFormPassword] = useState('')
   const [formRole, setFormRole] = useState<UserRole>('OPERATOR')
   const [formDept, setFormDept] = useState('Precision Metrology Bay')
+  const [formPhone, setFormPhone] = useState('')
   const [error, setError] = useState('')
 
   const refreshUsers = () => {
     loadUsersFromFirestore().then((cloudUsers) => {
       setUsers(cloudUsers)
     })
+  }
+
+  const togglePasswordVisibility = (userId: string) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }))
   }
 
   const handlePurgeAll = async () => {
@@ -78,8 +91,8 @@ export default function UserManagementView({
       return
     }
 
-    if (formDept) {
-      updateUser(res.user.id, { department: formDept })
+    if (formDept || formPhone) {
+      updateUser(res.user.id, { department: formDept, phone: formPhone })
     }
 
     onAddAuditEvent(
@@ -91,6 +104,7 @@ export default function UserManagementView({
     setFormEmail('')
     setFormPassword('')
     setFormRole('OPERATOR')
+    setFormPhone('')
     setError('')
     setOpenAddModal(false)
     refreshUsers()
@@ -115,6 +129,8 @@ export default function UserManagementView({
     if (!editingUser) return
     updateUser(editingUser.id, {
       name: editingUser.name,
+      email: editingUser.email,
+      passwordHash: editingUser.passwordHash,
       role: editingUser.role,
       department: editingUser.department,
       phone: editingUser.phone,
@@ -122,7 +138,7 @@ export default function UserManagementView({
 
     onAddAuditEvent(
       'ADMIN_UPDATE_USER',
-      `Updated user profile & role for ${editingUser.name} (${editingUser.email})`
+      `Updated user profile & credentials for ${editingUser.name} (${editingUser.email})`
     )
     setEditingUser(null)
     refreshUsers()
@@ -213,7 +229,7 @@ export default function UserManagementView({
         <div className="panel-heading">
           <div>
             <h2>Authorized Laboratory Personnel ({filtered.length})</h2>
-            <p>Full CRUD access is available for administrator accounts.</p>
+            <p>Full CRUD access and credential management for administrator accounts.</p>
           </div>
         </div>
 
@@ -223,6 +239,7 @@ export default function UserManagementView({
               <tr>
                 <th>Personnel</th>
                 <th>Role & Permissions</th>
+                <th>Assigned Credentials</th>
                 <th>Department</th>
                 <th>Status</th>
                 <th>Created Date</th>
@@ -270,6 +287,39 @@ export default function UserManagementView({
                       {user.role === 'ADMIN' ? 'SUPERVISOR (ADMIN)' : 'METROLOGIST (OPERATOR)'}
                     </span>
                   </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          fontFamily: 'DM Mono, monospace',
+                          fontSize: '10px',
+                          color: '#557275',
+                          background: '#f1f5f4',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          border: '1px solid #dbe6e3',
+                        }}
+                      >
+                        {visiblePasswords[user.id] ? user.passwordHash : '••••••••'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility(user.id)}
+                        style={{
+                          border: 0,
+                          background: 'transparent',
+                          color: '#718c89',
+                          cursor: 'pointer',
+                          display: 'grid',
+                          placeItems: 'center',
+                          padding: '2px',
+                        }}
+                        title={visiblePasswords[user.id] ? 'Hide Password' : 'Show Password'}
+                      >
+                        {visiblePasswords[user.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </div>
+                  </td>
                   <td>{user.department || 'Metrology Standards'}</td>
                   <td>
                     <button
@@ -298,8 +348,11 @@ export default function UserManagementView({
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         className="text-button"
-                        onClick={() => setEditingUser({ ...user })}
-                        title="Edit user role and info"
+                        onClick={() => {
+                          setEditingUser({ ...user })
+                          setShowEditPassword(false)
+                        }}
+                        title="Edit user credentials and info"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                       >
                         <Edit2 size={12} /> Edit
@@ -341,7 +394,7 @@ export default function UserManagementView({
                 Full Name *
                 <input
                   value={formName}
-                  placeholder="e.g. Dr. Rajesh Kumar"
+                  placeholder="e.g. Rohit Sharma"
                   onChange={(e) => setFormName(e.target.value)}
                 />
               </label>
@@ -350,7 +403,7 @@ export default function UserManagementView({
                 <input
                   type="email"
                   value={formEmail}
-                  placeholder="rajesh@laboratory.gov"
+                  placeholder="rohit@laboratory.gov"
                   onChange={(e) => setFormEmail(e.target.value)}
                 />
               </label>
@@ -365,20 +418,45 @@ export default function UserManagementView({
                 </select>
               </label>
               <label>
-                Initial Password *
-                <input
-                  type="password"
-                  value={formPassword}
-                  placeholder="At least 6 characters"
-                  onChange={(e) => setFormPassword(e.target.value)}
-                />
+                Password *
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showAddPassword ? 'text' : 'password'}
+                    value={formPassword}
+                    placeholder="At least 6 characters"
+                    onChange={(e) => setFormPassword(e.target.value)}
+                    style={{ width: '100%', paddingRight: '32px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAddPassword(!showAddPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      border: 0,
+                      background: 'transparent',
+                      color: '#718c89',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {showAddPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
               </label>
-              <label className="wide">
+              <label>
                 Department / Division
                 <input
                   value={formDept}
                   placeholder="e.g. Precision Weights & Balance Section"
                   onChange={(e) => setFormDept(e.target.value)}
+                />
+              </label>
+              <label>
+                Contact Phone
+                <input
+                  value={formPhone}
+                  placeholder="+91 98765 43210"
+                  onChange={(e) => setFormPhone(e.target.value)}
                 />
               </label>
             </div>
@@ -405,7 +483,7 @@ export default function UserManagementView({
               <div>
                 <p className="eyebrow">ADMIN CONSOLE · EDIT PERSONNEL</p>
                 <h2>Edit {editingUser.name}</h2>
-                <p>Modify role and department permissions.</p>
+                <p>Modify credentials, role permissions, and laboratory assignment.</p>
               </div>
               <button className="modal-close" onClick={() => setEditingUser(null)}>
                 ×
@@ -419,6 +497,39 @@ export default function UserManagementView({
                   value={editingUser.name}
                   onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
                 />
+              </label>
+              <label>
+                Official Email Address
+                <input
+                  type="email"
+                  value={editingUser.email}
+                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                />
+              </label>
+              <label>
+                Password / Password Hash
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showEditPassword ? 'text' : 'password'}
+                    value={editingUser.passwordHash}
+                    onChange={(e) => setEditingUser({ ...editingUser, passwordHash: e.target.value })}
+                    style={{ width: '100%', paddingRight: '32px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPassword(!showEditPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      border: 0,
+                      background: 'transparent',
+                      color: '#718c89',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {showEditPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
               </label>
               <label>
                 Assigned Role

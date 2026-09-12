@@ -577,24 +577,31 @@ function Dashboard({
       />
       <section className="stat-grid">
         {[
-          ['◫', 'Instruments', `${instrumentsCount}`, instrumentsCount === 0 ? 'No instruments registered' : `${instrumentsCount} registered`],
-          ['⌁', 'Test sessions', instrumentsCount > 0 ? '1' : '0', instrumentsCount > 0 ? 'Session ready' : 'No active sessions'],
-          ['▤', 'Reports', `${reportsCount}`, reportsCount === 0 ? 'Generated after test' : `${reportsCount} sealed certificates`],
-          ['◷', 'Audit events', `${auditCount}`, `${auditCount} actions recorded`],
-        ].map((item) => (
-          <div className="stat-card" key={item[1]}>
-            <span className="stat-icon teal">{item[0]}</span>
-            <strong>{item[2]}</strong>
-            <span>
-              {item[1]} <em>{item[3]}</em>
-            </span>
-          </div>
-        ))}
+          { icon: Weight, title: 'Instruments', count: `${instrumentsCount}`, sub: instrumentsCount === 0 ? 'No instruments registered' : `${instrumentsCount} registered`, color: 'teal' },
+          { icon: Activity, title: 'Test sessions', count: instrumentsCount > 0 ? '1' : '0', sub: instrumentsCount > 0 ? 'Session ready' : 'No active sessions', color: 'navy' },
+          { icon: FileCheck2, title: 'Reports', count: `${reportsCount}`, sub: reportsCount === 0 ? 'Generated after test' : `${reportsCount} sealed certificates`, color: 'amber' },
+          { icon: History, title: 'Audit events', count: `${auditCount}`, sub: `${auditCount} actions recorded`, color: 'rose' },
+        ].map((item) => {
+          const Icon = item.icon
+          return (
+            <div className="stat-card" key={item.title}>
+              <div className={`stat-icon ${item.color}`}>
+                <Icon size={15} />
+              </div>
+              <strong>{item.count}</strong>
+              <span>
+                {item.title} <em>{item.sub}</em>
+              </span>
+            </div>
+          )
+        })}
       </section>
 
       <section className="dashboard-grid">
         <div className="panel empty-panel">
-          <span className="empty-icon">▣</span>
+          <div className="empty-icon">
+            <Weight size={20} />
+          </div>
           <h2>
             {instrumentsCount === 0
               ? 'Register an instrument to begin'
@@ -614,7 +621,9 @@ function Dashboard({
         </div>
 
         <div className="panel empty-panel">
-          <span className="empty-icon">▤</span>
+          <div className="empty-icon">
+            <FileCheck2 size={20} />
+          </div>
           <h2>
             {reportsCount === 0
               ? 'No reports generated yet'
@@ -768,7 +777,9 @@ function ReportsView({
         </section>
       ) : (
         <div className="empty-state">
-          <span>▤</span>
+          <div className="empty-icon" style={{ width: 45, height: 45, margin: '0 auto 12px' }}>
+            <FileCheck2 size={22} />
+          </div>
           <h2>Your report repository is empty</h2>
           <p>
             Complete a weighing performance session and click &ldquo;Seal &amp; Generate report PDF&rdquo; to seal your first official certificate.
@@ -843,7 +854,7 @@ function SearchView({
       />
       <section className="search-hero">
         <div className="big-search">
-          ⌕{' '}
+          <Search size={18} style={{ flexShrink: 0 }} />
           <input
             autoFocus
             value={query}
@@ -924,14 +935,18 @@ function SearchView({
           </section>
         ) : (
           <div className="empty-state search-empty">
-            <span>⌕</span>
+            <div className="empty-icon" style={{ width: 45, height: 45, margin: '0 auto 12px' }}>
+              <Search size={22} />
+            </div>
             <h2>No records match &ldquo;{query}&rdquo;</h2>
             <p>Try searching with instrument serial number or certificate number.</p>
           </div>
         )
       ) : (
         <div className="empty-state search-empty">
-          <span>◌</span>
+          <div className="empty-icon" style={{ width: 45, height: 45, margin: '0 auto 12px' }}>
+            <Search size={22} />
+          </div>
           <h2>Search across your workspace</h2>
           <p>
             Currently {instruments.length} instrument{instruments.length !== 1 ? 's' : ''} and {reports.length} report{reports.length !== 1 ? 's' : ''} in the database.

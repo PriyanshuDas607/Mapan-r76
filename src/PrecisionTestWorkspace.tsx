@@ -207,8 +207,8 @@ export default function PrecisionTestWorkspace({
   // If no instrument registered and manual mode not active, prompt user cleanly
   if (instruments.length === 0 && !manualMode) {
     return (
-      <div style={{ margin: '30px 4.3%' }}>
-        <div className="workflow-heading" style={{ padding: '0 0 20px' }}>
+      <>
+        <div className="workflow-heading">
           <div>
             <p className="eyebrow">TEST EXECUTION · NEW SESSION</p>
             <h1>Weighing Performance Workspace</h1>
@@ -218,8 +218,10 @@ export default function PrecisionTestWorkspace({
           </div>
         </div>
 
-        <div className="empty-state" style={{ margin: '20px 0', background: '#ffffff' }}>
-          <span style={{ fontSize: '28px' }}>⚖</span>
+        <div className="empty-state">
+          <div className="empty-icon" style={{ width: 45, height: 45, margin: '0 auto 12px' }}>
+            <Scale size={24} />
+          </div>
           <h2>No Registered Instrument Selected</h2>
           <p style={{ maxWidth: '480px' }}>
             To perform a legal metrology test and compute error vs MPE tolerances, you must first register an instrument or enter custom parameters.
@@ -252,7 +254,7 @@ export default function PrecisionTestWorkspace({
             </button>
           </div>
         </div>
-      </div>
+      </>
     )
   }
 
