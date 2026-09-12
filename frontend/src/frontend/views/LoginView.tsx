@@ -277,7 +277,7 @@ export default function LoginView({ onLogin }: Props) {
 
               <label>
                 Laboratory Designation / Role *
-                <div className="input-wrap" style={{ padding: '0 8px' }}>
+                <div className="input-wrap" style={{ padding: '0 12px' }}>
                   <Briefcase size={16} color="#70878a" />
                   <select
                     value={jobTitle}
@@ -287,15 +287,16 @@ export default function LoginView({ onLogin }: Props) {
                       height: '38px',
                       border: 'none',
                       outline: 'none',
-                      fontSize: '10.5px',
-                      color: '#2b4d52',
+                      fontSize: '11px',
+                      color: 'inherit',
                       background: 'transparent',
+                      cursor: 'pointer',
                     }}
                   >
-                    <option value="Laboratory Metrologist / Verification Officer">Laboratory Metrologist / Verification Officer</option>
-                    <option value="Calibration Specialist">Calibration Specialist</option>
-                    <option value="Standards Testing Assistant">Standards Testing Assistant</option>
-                    <option value="Quality Inspection Officer">Quality Inspection Officer</option>
+                    <option style={{ background: '#ffffff', color: '#17252b' }} value="Laboratory Metrologist / Verification Officer">Laboratory Metrologist / Verification Officer</option>
+                    <option style={{ background: '#ffffff', color: '#17252b' }} value="Calibration Specialist">Calibration Specialist</option>
+                    <option style={{ background: '#ffffff', color: '#17252b' }} value="Standards Testing Assistant">Standards Testing Assistant</option>
+                    <option style={{ background: '#ffffff', color: '#17252b' }} value="Quality Inspection Officer">Quality Inspection Officer</option>
                   </select>
                 </div>
               </label>

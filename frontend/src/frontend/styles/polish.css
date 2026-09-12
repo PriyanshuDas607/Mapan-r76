@@ -300,12 +300,41 @@
 
 [data-theme="dark"] .search-field,
 [data-theme="dark"] .big-search,
-[data-theme="dark"] input,
-[data-theme="dark"] select,
-[data-theme="dark"] textarea {
+[data-theme="dark"] .form-grid input,
+[data-theme="dark"] .form-grid select,
+[data-theme="dark"] .test-controls input,
+[data-theme="dark"] .test-controls select,
+[data-theme="dark"] .settings-form input,
+[data-theme="dark"] .settings-form select,
+[data-theme="dark"] .settings-form textarea,
+[data-theme="dark"] .view-toolbar select,
+[data-theme="dark"] .reading-row input,
+[data-theme="dark"] .audit-filters select,
+[data-theme="dark"] .panel select {
   background: #162830 !important;
   border-color: #284451 !important;
   color: #e2eff2 !important;
+}
+
+[data-theme="dark"] .input-wrap {
+  background: #162830 !important;
+  border-color: #284451 !important;
+  color: #e2eff2 !important;
+}
+
+.input-wrap input,
+.input-wrap select,
+.search-field input,
+.big-search input,
+[data-theme="dark"] .input-wrap input,
+[data-theme="dark"] .input-wrap select,
+[data-theme="dark"] .search-field input,
+[data-theme="dark"] .big-search input {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  color: inherit !important;
 }
 
 [data-theme="dark"] input::placeholder,
