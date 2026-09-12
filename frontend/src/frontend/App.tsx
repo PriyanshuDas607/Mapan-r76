@@ -94,13 +94,13 @@ export default function App() {
   // Load cloud data from Firestore on mount
   useEffect(() => {
     loadInstrumentsFromFirestore().then((list) => {
-      if (list.length > 0) setInstruments(list)
+      setInstruments(list)
     })
     loadReportsFromFirestore().then((list) => {
-      if (list.length > 0) setReports(list)
+      setReports(list)
     })
     loadAuditLogsFromFirestore().then((list) => {
-      if (list.length > 0) setAuditEvents(list)
+      setAuditEvents(list)
     })
   }, [])
 

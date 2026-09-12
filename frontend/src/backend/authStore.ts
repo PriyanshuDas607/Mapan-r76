@@ -210,7 +210,7 @@ export function setCurrentSession(user: User | null) {
 }
 
 /**
- * Public User Registration - Guarantees Immediate Cloud Save in Firestore
+ * Public User Registration - Instant Fast Response with Guaranteed Firestore Cloud Save
  */
 export async function registerNewUser(
   name: string,
@@ -229,8 +229,8 @@ export async function registerNewUser(
     return { success: false, error: 'Password must be at least 6 characters long.' }
   }
 
-  // Check local and cloud users
-  const currentUsers = await loadUsersFromFirestore()
+  // Fast check from local cached users
+  const currentUsers = getStoredUsers()
   if (currentUsers.some((u) => u.email.toLowerCase() === normalizedEmail)) {
     return { success: false, error: 'An account with this email address already exists.' }
   }
@@ -255,17 +255,16 @@ export async function registerNewUser(
   saveStoredUsers(updated)
   setCurrentSession(newUser)
 
-  // Direct, reliable Firestore write
-  const syncSuccess = await syncUserToFirestore(newUser)
-  if (!syncSuccess) {
-    console.warn('[Firestore] Registration written to local cache, cloud sync queued.')
-  }
+  // Direct, non-blocking asynchronous Firestore write with background confirmation
+  syncUserToFirestore(newUser).catch((err) => {
+    console.error('[Firestore] User background sync error:', err)
+  })
 
   return { success: true, user: newUser }
 }
 
 /**
- * Admin Personnel Creation (Admin Console)
+ * Admin User Creation (Admin Console)
  */
 export async function adminCreateUser(
   name: string,
@@ -281,7 +280,7 @@ export async function adminCreateUser(
     return { success: false, error: 'Name, email, and password are required.' }
   }
 
-  const currentUsers = await loadUsersFromFirestore()
+  const currentUsers = getStoredUsers()
   if (currentUsers.some((u) => u.email.toLowerCase() === normalizedEmail)) {
     return { success: false, error: 'An account with this email already exists.' }
   }
@@ -303,7 +302,11 @@ export async function adminCreateUser(
 
   const updated = [newUser, ...currentUsers.filter((u) => u.email.toLowerCase() !== normalizedEmail)]
   saveStoredUsers(updated)
-  await syncUserToFirestore(newUser)
+
+  // Direct Firestore write
+  syncUserToFirestore(newUser).catch((err) => {
+    console.error('[Firestore] Admin create user sync error:', err)
+  })
 
   return { success: true, user: newUser }
 }

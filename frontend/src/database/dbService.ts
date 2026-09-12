@@ -186,11 +186,7 @@ export async function loadInstrumentsFromFirestore(): Promise<Instrument[]> {
   try {
     const querySnapshot = await withTimeout(getDocs(collection(db, 'instruments')), 8000, null)
     if (!querySnapshot || querySnapshot.empty) {
-      // Seed standard instruments to Firestore if empty
-      for (const inst of DEFAULT_INSTRUMENTS) {
-        syncInstrumentToFirestore(inst).catch(() => {})
-      }
-      return DEFAULT_INSTRUMENTS
+      return []
     }
     const list: Instrument[] = []
     querySnapshot.forEach((d) => {
@@ -211,10 +207,10 @@ export async function loadInstrumentsFromFirestore(): Promise<Instrument[]> {
         })
       }
     })
-    return list.length > 0 ? list : DEFAULT_INSTRUMENTS
+    return list
   } catch (err) {
-    console.warn('[Firestore] Error loading instruments, using local defaults:', err)
-    return DEFAULT_INSTRUMENTS
+    console.warn('[Firestore] Error loading instruments:', err)
+    return []
   }
 }
 
@@ -257,11 +253,7 @@ export async function loadReportsFromFirestore(): Promise<ReportData[]> {
   try {
     const querySnapshot = await withTimeout(getDocs(collection(db, 'reports')), 8000, null)
     if (!querySnapshot || querySnapshot.empty) {
-      // Seed default baseline reports to Firestore
-      for (const rep of DEFAULT_REPORTS) {
-        syncReportToFirestore(rep).catch(() => {})
-      }
-      return DEFAULT_REPORTS
+      return []
     }
     const list: ReportData[] = []
     querySnapshot.forEach((d) => {
@@ -270,10 +262,10 @@ export async function loadReportsFromFirestore(): Promise<ReportData[]> {
         list.push(data)
       }
     })
-    return list.length > 0 ? list : DEFAULT_REPORTS
+    return list
   } catch (err) {
-    console.warn('[Firestore] Error loading reports, using baseline records:', err)
-    return DEFAULT_REPORTS
+    console.warn('[Firestore] Error loading reports:', err)
+    return []
   }
 }
 
@@ -304,10 +296,7 @@ export async function loadAuditLogsFromFirestore(): Promise<AuditEvent[]> {
   try {
     const querySnapshot = await withTimeout(getDocs(collection(db, 'audit_logs')), 8000, null)
     if (!querySnapshot || querySnapshot.empty) {
-      for (const evt of DEFAULT_AUDIT_LOGS) {
-        syncAuditLogToFirestore(evt).catch(() => {})
-      }
-      return DEFAULT_AUDIT_LOGS
+      return []
     }
     const list: AuditEvent[] = []
     querySnapshot.forEach((d) => {
@@ -316,10 +305,10 @@ export async function loadAuditLogsFromFirestore(): Promise<AuditEvent[]> {
         list.push(data)
       }
     })
-    return list.length > 0 ? list : DEFAULT_AUDIT_LOGS
+    return list
   } catch (err) {
-    console.warn('[Firestore] Error loading audit logs, using baseline records:', err)
-    return DEFAULT_AUDIT_LOGS
+    console.warn('[Firestore] Error loading audit logs:', err)
+    return []
   }
 }
 

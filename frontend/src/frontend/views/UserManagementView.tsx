@@ -189,7 +189,7 @@ export default function UserManagementView({
           </button>
           <button className="button primary" onClick={() => setOpenAddModal(true)}>
             <UserPlus size={14} style={{ marginRight: '5px' }} />
-            ＋ Add Personnel
+            ＋ Add User
           </button>
         </div>
       </div>
@@ -380,8 +380,8 @@ export default function UserManagementView({
           <section className="register-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
-                <p className="eyebrow">ADMIN CONSOLE · PERSONNEL ONBOARDING</p>
-                <h2>Add Laboratory Personnel</h2>
+                <p className="eyebrow">ADMIN CONSOLE · USER ONBOARDING</p>
+                <h2>Add New User</h2>
                 <p>Create a verified user account with assigned metrology roles.</p>
               </div>
               <button className="modal-close" onClick={() => setOpenAddModal(false)}>
