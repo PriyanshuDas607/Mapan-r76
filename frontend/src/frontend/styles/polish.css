@@ -316,18 +316,39 @@
   color: #e2eff2 !important;
 }
 
-[data-theme="dark"] .input-wrap {
-  background: #162830 !important;
-  border-color: #284451 !important;
-  color: #e2eff2 !important;
+/* Keep Login inputs clean, bright white and crisp */
+.login-shell .input-wrap,
+[data-theme="dark"] .login-shell .input-wrap {
+  background: #ffffff !important;
+  border: 1px solid #d6e2de !important;
+  color: #19343b !important;
+  box-shadow: none !important;
 }
 
-.input-wrap input,
-.input-wrap select,
+.login-shell .input-wrap:focus-within,
+[data-theme="dark"] .login-shell .input-wrap:focus-within {
+  border-color: #0f7c76 !important;
+  box-shadow: 0 0 0 3px rgba(15, 124, 118, 0.15) !important;
+}
+
+.login-shell .input-wrap input,
+.login-shell .input-wrap select,
+[data-theme="dark"] .login-shell .input-wrap input,
+[data-theme="dark"] .login-shell .input-wrap select {
+  background: transparent !important;
+  border: 0 !important;
+  color: #19343b !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+.login-shell .input-wrap input::placeholder,
+[data-theme="dark"] .login-shell .input-wrap input::placeholder {
+  color: #8da19e !important;
+}
+
 .search-field input,
 .big-search input,
-[data-theme="dark"] .input-wrap input,
-[data-theme="dark"] .input-wrap select,
 [data-theme="dark"] .search-field input,
 [data-theme="dark"] .big-search input {
   background: transparent !important;
