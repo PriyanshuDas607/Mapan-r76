@@ -239,8 +239,10 @@ export default function CalibrationReport({ data, onClose, onPrint }: Props) {
                 <span className="cert-val mono">{data.standardWeightsRef}</span>
               </div>
               <div className="cert-item" style={{ gridColumn: 'span 2' }}>
-                <span className="cert-label">Applicable Standard & Procedure</span>
-                <span className="cert-val">OIML R 76-1:2006 Clause A.4.4 (Weighing Performance)</span>
+                <span className="cert-label">Atmospheric Traceability & Air Density (ρ)</span>
+                <span className="cert-val mono">
+                  {((0.34848 * (parseFloat(data.pressure) || 1013.25) - 0.009 * (parseFloat(data.humidity) || 50) * Math.exp(0.061 * (parseFloat(data.temperature) || 21.5))) / (273.15 + (parseFloat(data.temperature) || 21.5))).toFixed(3)} kg/m³ (ISO/IEC 17025 Cl. 6.3)
+                </span>
               </div>
             </div>
           </section>

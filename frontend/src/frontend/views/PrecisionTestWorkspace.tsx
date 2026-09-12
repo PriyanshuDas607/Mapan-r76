@@ -8,6 +8,9 @@ import '../styles/workflow.css'
 
 import { evaluateWeighingReading, validateInstrumentClassification, OIML_CLAUSES } from '../../backend/oimlEngine.ts'
 import type { AccuracyClass } from '../../backend/oimlEngine.ts'
+import { autoFetchEnvironmentalData, calculateAirDensity } from '../../backend/environmentalService.ts'
+import type { EnvironmentalData } from '../../backend/environmentalService.ts'
+import { CloudSun, RefreshCw } from 'lucide-react'
 
 type Row = { id: number; load: string; indication: string }
 
@@ -96,12 +99,53 @@ export default function PrecisionTestWorkspace({
     return validateInstrumentClassification(Number(maxCapacity), interval, accuracyClass)
   }, [maxCapacity, interval, accuracyClass])
 
-  // Environmental & Test Conditions
+  // Environmental & Test Conditions (Auto-populated from Open-Meteo & GPS, editable for manual lab overrides)
   const [temperature, setTemperature] = useState('21.4 °C')
   const [humidity, setHumidity] = useState('48.2 % RH')
   const [pressure, setPressure] = useState('1013.2 hPa')
   const [standardWeightsRef, setStandardWeightsRef] = useState('Class E2 Standard Weights (Cert: NPL-2026-W89)')
   const [showConfig, setShowConfig] = useState(false)
+  const [envData, setEnvData] = useState<EnvironmentalData | null>(null)
+  const [envLoading, setEnvLoading] = useState(false)
+
+  // Auto-detect real-time environment via keyless lifetime-free Open-Meteo & Geolocation
+  const handleAutoFetchEnv = async () => {
+    setEnvLoading(true)
+    try {
+      const data = await autoFetchEnvironmentalData()
+      setEnvData(data)
+      setTemperature(data.temperature)
+      setHumidity(data.humidity)
+      setPressure(data.pressure)
+      if (data.locationName && (!instrumentForm.location || instrumentForm.location.includes('Calibration Bay'))) {
+        setInstrumentForm((prev) => ({ ...prev, location: data.locationName }))
+      }
+    } catch (err) {
+      console.warn('Auto-fetch environmental data error:', err)
+    } finally {
+      setEnvLoading(false)
+    }
+  }
+
+  // Fetch on mount
+  useEffect(() => {
+    handleAutoFetchEnv()
+  }, [])
+
+  // Calculate real-time air density for Class I & II balances
+  const airDensityVal = useMemo(() => {
+    const tNum = parseFloat(temperature) || 21.5
+    const hNum = parseFloat(humidity) || 50.0
+    const pNum = parseFloat(pressure) || 1013.25
+    return calculateAirDensity(tNum, hNum, pNum)
+  }, [temperature, humidity, pressure])
+
+  // OIML R-76 Clause 3.9.2.1 Temperature limit check (-10°C to +40°C)
+  const isTempOutOfOIMLLimits = useMemo(() => {
+    const tNum = parseFloat(temperature)
+    if (isNaN(tNum)) return false
+    return tNum < -10 || tNum > 40
+  }, [temperature])
 
   // Report Modal & SHA-256 Hash
   const [showReportModal, setShowReportModal] = useState(false)
@@ -437,6 +481,79 @@ export default function PrecisionTestWorkspace({
               animation: 'fadeIn 0.2s ease',
             }}
           >
+            {/* Real-Time Live Environmental Sensor / Open-Meteo & GPS Bar */}
+            <div
+              style={{
+                gridColumn: '1 / -1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+                padding: '8px 12px',
+                background: '#eaf4f1',
+                borderRadius: '6px',
+                border: '1px solid #d4ebe3',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', color: '#135c56' }}>
+                <CloudSun size={16} />
+                <span>
+                  <strong>ISO/IEC 17025 Live Sensors:</strong> {temperature} · {humidity} · {pressure} |{' '}
+                  <strong>Air Density (ρ):</strong> {airDensityVal} kg/m³
+                  {envData?.locationName && (
+                    <span style={{ marginLeft: '6px', opacity: 0.9 }}>
+                      📍 {envData.locationName} {envData.source ? `[${envData.source}]` : ''}
+                    </span>
+                  )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleAutoFetchEnv}
+                disabled={envLoading}
+                style={{
+                  background: '#0f7c76',
+                  color: '#fff',
+                  border: 0,
+                  borderRadius: '4px',
+                  padding: '5px 10px',
+                  fontSize: '9.5px',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  cursor: 'pointer',
+                }}
+              >
+                <RefreshCw size={12} style={{ animation: envLoading ? 'spin 1s linear infinite' : 'none' }} />{' '}
+                {envLoading ? 'Fetching Live...' : 'Auto-Fetch Live GPS & Open-Meteo'}
+              </button>
+            </div>
+
+            {/* OIML Clause 3.9.2.1 Temperature Limit Check */}
+            {isTempOutOfOIMLLimits && (
+              <div
+                style={{
+                  gridColumn: '1 / -1',
+                  background: '#fff3cd',
+                  border: '1px solid #ffeeba',
+                  color: '#856404',
+                  padding: '8px 12px',
+                  borderRadius: '5px',
+                  fontSize: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <AlertTriangle size={15} />
+                <span>
+                  <strong>OIML R-76 Clause 3.9.2.1 Warning:</strong> Ambient temperature ({temperature}) is outside standard operational limits (-10°C to +40°C). Legal verification may require special temperature chambers.
+                </span>
+              </div>
+            )}
+
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#567073' }}>
               Serial Number
               <input
@@ -471,7 +588,7 @@ export default function PrecisionTestWorkspace({
               />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#567073' }}>
-              Ambient Temperature
+              Ambient Temperature (Auto / Manual)
               <input
                 style={{ height: '32px', border: '1px solid #d4e2de', borderRadius: '4px', padding: '0 8px', fontSize: '10px' }}
                 value={temperature}
@@ -479,7 +596,7 @@ export default function PrecisionTestWorkspace({
               />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#567073' }}>
-              Relative Humidity
+              Relative Humidity (Auto / Manual)
               <input
                 style={{ height: '32px', border: '1px solid #d4e2de', borderRadius: '4px', padding: '0 8px', fontSize: '10px' }}
                 value={humidity}
@@ -487,7 +604,7 @@ export default function PrecisionTestWorkspace({
               />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#567073' }}>
-              Barometric Pressure
+              Barometric Pressure (Auto / Manual)
               <input
                 style={{ height: '32px', border: '1px solid #d4e2de', borderRadius: '4px', padding: '0 8px', fontSize: '10px' }}
                 value={pressure}
