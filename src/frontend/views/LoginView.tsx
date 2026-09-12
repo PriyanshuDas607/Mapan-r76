@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Weight, UserPlus, LogIn, UserCheck, Briefcase } from 'lucide-react'
-import { authenticateUser, registerNewUser } from './authStore'
-import type { User } from './authStore'
-import './login.css'
+import { authenticateUser, registerNewUser } from '../../backend/authStore.ts'
+import type { User } from '../../backend/authStore.ts'
+import '../styles/login.css'
 
 type Props = {
   onLogin: (user: User) => void

@@ -1,4 +1,4 @@
-import { db, doc, setDoc, deleteDoc, getDocs, collection, withTimeout } from './firebase'
+import { db, doc, setDoc, deleteDoc, getDocs, collection, withTimeout } from '../database/firebase.ts'
 
 export type UserRole = 'ADMIN' | 'OPERATOR'
 

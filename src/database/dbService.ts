@@ -6,10 +6,10 @@ import {
   getDocs,
   deleteDoc,
   withTimeout,
-} from './firebase'
-import type { Instrument } from './InstrumentRegisterView'
-import type { ReportData } from './CalibrationReport'
-import type { AuditEvent } from './App'
+} from './firebase.ts'
+import type { Instrument } from '../frontend/views/InstrumentRegisterView.tsx'
+import type { ReportData } from '../frontend/views/CalibrationReport.tsx'
+import type { AuditEvent } from '../frontend/App.tsx'
 
 // ==========================================
 // INSTRUMENTS FIRESTORE SYNC

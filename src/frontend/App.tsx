@@ -1,15 +1,15 @@
 import { useState, useMemo, useEffect } from 'react'
-import InstrumentRegisterView from './InstrumentRegisterView'
-import type { Instrument } from './InstrumentRegisterView'
-import PrecisionTestWorkspace from './PrecisionTestWorkspace'
-import CalibrationReport from './CalibrationReport'
-import type { ReportData } from './CalibrationReport'
-import LoginView from './LoginView'
-import UserManagementView from './UserManagementView'
-import { AccountSettings, SettingsView } from './SettingsView'
-import { getCurrentSession, setCurrentSession } from './authStore'
-import type { User } from './authStore'
-import { generateSHA256Hash } from './cryptoUtils'
+import InstrumentRegisterView from './views/InstrumentRegisterView.tsx'
+import type { Instrument } from './views/InstrumentRegisterView.tsx'
+import PrecisionTestWorkspace from './views/PrecisionTestWorkspace.tsx'
+import CalibrationReport from './views/CalibrationReport.tsx'
+import type { ReportData } from './views/CalibrationReport.tsx'
+import LoginView from './views/LoginView.tsx'
+import UserManagementView from './views/UserManagementView.tsx'
+import { AccountSettings, SettingsView } from './views/SettingsView.tsx'
+import { getCurrentSession, setCurrentSession } from '../backend/authStore.ts'
+import type { User } from '../backend/authStore.ts'
+import { generateSHA256Hash } from '../backend/cryptoUtils.ts'
 import {
   syncInstrumentToFirestore,
   deleteInstrumentFromFirestore,
@@ -19,7 +19,7 @@ import {
   loadReportsFromFirestore,
   syncAuditLogToFirestore,
   loadAuditLogsFromFirestore,
-} from './dbService'
+} from '../database/dbService.ts'
 import {
   Activity,
   Bell,
@@ -36,10 +36,10 @@ import {
   Moon,
   ShieldCheck,
 } from 'lucide-react'
-import './App.css'
-import './views.css'
-import './polish.css'
-import './report.css'
+import './styles/App.css'
+import './styles/views.css'
+import './styles/polish.css'
+import './styles/report.css'
 
 type Page =
   | 'Overview'

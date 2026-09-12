@@ -17,9 +17,9 @@ import {
   updateUser,
   deleteUser,
   purgeNonAdminUsers,
-} from './authStore'
-import type { User, UserRole } from './authStore'
-import './views.css'
+} from '../../backend/authStore.ts'
+import type { User, UserRole } from '../../backend/authStore.ts'
+import '../styles/views.css'
 
 type Props = {
   currentUserId: string

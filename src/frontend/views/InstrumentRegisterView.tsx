@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Edit2, Trash2, Search } from 'lucide-react'
-import './workflow.css'
+import '../styles/workflow.css'
 
 export type Instrument = {
   serial: string

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Bell, Building2, FileCheck2, LockKeyhole, Save, ShieldCheck, UserRound } from 'lucide-react'
-import type { User } from './authStore'
-import { updateUser } from './authStore'
-import './settings.css'
+import type { User } from '../../backend/authStore.ts'
+import { updateUser } from '../../backend/authStore.ts'
+import '../styles/settings.css'
 
 type SettingsTab = 'Laboratory' | 'Standards' | 'Reports' | 'Security' | 'Notifications'
 type AccountTab = 'Profile' | 'Security' | 'Sessions'

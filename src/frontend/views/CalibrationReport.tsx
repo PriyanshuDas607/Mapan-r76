@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle2, AlertTriangle, Printer, X, ShieldCheck } from 'lucide-react'
-import { generateQRCodeDataURL } from './cryptoUtils'
-import './report.css'
+import { generateQRCodeDataURL } from '../../backend/cryptoUtils.ts'
+import '../styles/report.css'
 
 export type InstrumentInfo = {
   serial: string

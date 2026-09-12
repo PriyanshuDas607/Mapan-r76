@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
 import { FileText, Printer, Sliders, CheckCircle2, AlertTriangle, ShieldCheck, Scale, Building2, MapPin, Plus, Trash2 } from 'lucide-react'
-import CalibrationReport from './CalibrationReport'
-import type { ReportData, InstrumentInfo, ObservationRow } from './CalibrationReport'
-import type { Instrument } from './InstrumentRegisterView'
-import { generateSHA256Hash } from './cryptoUtils'
-import './workflow.css'
+import CalibrationReport from './CalibrationReport.tsx'
+import type { ReportData, InstrumentInfo, ObservationRow } from './CalibrationReport.tsx'
+import type { Instrument } from './InstrumentRegisterView.tsx'
+import { generateSHA256Hash } from '../../backend/cryptoUtils.ts'
+import '../styles/workflow.css'
 
 type Row = { id: number; load: string; indication: string }
 
