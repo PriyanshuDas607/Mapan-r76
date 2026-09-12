@@ -34,6 +34,7 @@ import {
   Trash2,
   Sun,
   Moon,
+  ShieldCheck,
 } from 'lucide-react'
 import './App.css'
 import './views.css'
@@ -578,15 +579,15 @@ function Dashboard({
       <section className="stat-grid">
         {[
           { icon: Weight, title: 'Instruments', count: `${instrumentsCount}`, sub: instrumentsCount === 0 ? 'No instruments registered' : `${instrumentsCount} registered`, color: 'teal' },
-          { icon: Activity, title: 'Test sessions', count: instrumentsCount > 0 ? '1' : '0', sub: instrumentsCount > 0 ? 'Session ready' : 'No active sessions', color: 'navy' },
-          { icon: FileCheck2, title: 'Reports', count: `${reportsCount}`, sub: reportsCount === 0 ? 'Generated after test' : `${reportsCount} sealed certificates`, color: 'amber' },
-          { icon: History, title: 'Audit events', count: `${auditCount}`, sub: `${auditCount} actions recorded`, color: 'rose' },
+          { icon: Activity, title: 'Test sessions', count: instrumentsCount > 0 ? '1' : '0', sub: instrumentsCount > 0 ? 'Session ready' : 'No active sessions', color: 'blue' },
+          { icon: FileCheck2, title: 'Reports', count: `${reportsCount}`, sub: reportsCount === 0 ? 'Generated after test' : `${reportsCount} sealed certificates`, color: 'emerald' },
+          { icon: ShieldCheck, title: 'Audit events', count: `${auditCount}`, sub: `${auditCount} actions recorded`, color: 'cyan' },
         ].map((item) => {
           const Icon = item.icon
           return (
             <div className="stat-card" key={item.title}>
               <div className={`stat-icon ${item.color}`}>
-                <Icon size={15} />
+                <Icon size={16} strokeWidth={2.2} />
               </div>
               <strong>{item.count}</strong>
               <span>
@@ -869,26 +870,14 @@ function SearchView({
           <section className="panel full-table" style={{ margin: '0 4.3%' }}>
             {matchedReports.length > 0 && (
               <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '13px', color: '#183e4e', margin: '0 0 10px' }}>
+                <h3 style={{ fontSize: '13px', margin: '0 0 10px' }}>
                   Matching Certificates ({matchedReports.length})
                 </h3>
                 {matchedReports.map((rep) => (
-                  <div
-                    key={rep.reportNumber}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '10px 14px',
-                      background: '#f8faf9',
-                      border: '1px solid #e1ede9',
-                      borderRadius: '6px',
-                      marginBottom: '8px',
-                    }}
-                  >
+                  <div key={rep.reportNumber} className="search-match-card">
                     <div>
                       <strong style={{ color: '#0f7c76', fontFamily: 'DM Mono' }}>{rep.reportNumber}</strong>
-                      <span style={{ marginLeft: '10px', fontSize: '11px', color: '#526e70' }}>
+                      <span style={{ marginLeft: '10px', fontSize: '11px' }}>
                         {rep.instrument.model} ({rep.instrument.serial}) · {rep.issueDate}
                       </span>
                     </div>
@@ -902,26 +891,14 @@ function SearchView({
 
             {matchedInstruments.length > 0 && (
               <div>
-                <h3 style={{ fontSize: '13px', color: '#183e4e', margin: '0 0 10px' }}>
+                <h3 style={{ fontSize: '13px', margin: '0 0 10px' }}>
                   Matching Instruments ({matchedInstruments.length})
                 </h3>
                 {matchedInstruments.map((inst) => (
-                  <div
-                    key={inst.serial}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '10px 14px',
-                      background: '#f8faf9',
-                      border: '1px solid #e1ede9',
-                      borderRadius: '6px',
-                      marginBottom: '8px',
-                    }}
-                  >
+                  <div key={inst.serial} className="search-match-card">
                     <div>
-                      <strong style={{ color: '#183e4e' }}>{inst.model}</strong>
-                      <span style={{ marginLeft: '10px', fontSize: '11px', color: '#526e70' }}>
+                      <strong>{inst.model}</strong>
+                      <span style={{ marginLeft: '10px', fontSize: '11px' }}>
                         S/N: {inst.serial} · Class {inst.accuracy} · Max {inst.max}kg
                       </span>
                     </div>
@@ -1003,21 +980,9 @@ function AuditView({
       />
 
       {/* Role-specific Notice Banner */}
-      <div
-        style={{
-          margin: '0 4.3% 16px',
-          padding: '12px 18px',
-          borderRadius: '8px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: isAdmin ? '#f0f7ff' : '#f0fdf4',
-          border: `1px solid ${isAdmin ? '#b9dcff' : '#bbf7d0'}`,
-          fontSize: '12.5px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '15px' }}>{isAdmin ? '🛡️' : '🔒'}</span>
+      <div className={`audit-role-banner ${isAdmin ? 'admin' : 'operator'}`}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '16px' }}>{isAdmin ? '🛡️' : '🔒'}</span>
           <span>
             {isAdmin ? (
               <>
@@ -1035,21 +1000,13 @@ function AuditView({
 
         {isAdmin && uniqueActors.length > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1b64b3' }}>
+            <label style={{ fontSize: '11.5px', fontWeight: 600 }}>
               Filter Personnel:
             </label>
             <select
               value={selectedActorFilter}
               onChange={(e) => setSelectedActorFilter(e.target.value)}
-              style={{
-                padding: '4px 10px',
-                fontSize: '12px',
-                borderRadius: '5px',
-                border: '1px solid #c9e2ff',
-                background: '#fff',
-                color: '#183e4e',
-                fontWeight: 600,
-              }}
+              className="audit-actor-select"
             >
               <option value="ALL">All Personnel ({auditEvents.length})</option>
               {uniqueActors.map((actor) => {
@@ -1108,9 +1065,9 @@ function AuditView({
                   <tr key={evt.id}>
                     <td>{evt.timestamp}</td>
                     <td>
-                      <strong style={{ color: '#183e4e' }}>{evt.actor}</strong>
+                      <strong>{evt.actor}</strong>
                       {evt.userEmail && (
-                        <small style={{ display: 'block', fontSize: '10.5px', color: '#668087' }}>
+                        <small style={{ display: 'block', fontSize: '10.5px' }}>
                           {evt.userEmail}
                         </small>
                       )}

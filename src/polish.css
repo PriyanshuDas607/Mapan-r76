@@ -1,6 +1,10 @@
 .reading-empty{min-height:230px;margin:20px;border:1px dashed #c9dcd6;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.reading-empty>span{color:var(--teal);font-size:25px}.reading-empty h3{color:var(--navy);font-size:13px;margin:10px 0 4px}.reading-empty p{color:#8b9998;font-size:9px;max-width:300px;margin:0 0 15px}.button:disabled{opacity:.45;cursor:not-allowed}.nav-item svg,.lab-switcher svg,.top-actions svg{flex:none;stroke:currentColor}.nav-item{gap:12px}.nav-item svg{color:#90a09e}.nav-item.active svg{color:var(--teal)}.icon-button{display:grid;place-items:center;padding:0}.notification{display:grid;place-items:center;transform:none}.notification svg{color:#718080}
-.stat-card .stat-icon{width:32px;height:32px;border-radius:7px;display:grid;place-items:center}
+.stat-card .stat-icon{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+.stat-card .stat-icon svg{stroke-width:2.2px}
 .stat-icon.teal{background:#e4f4f1;color:#0f7c76}
+.stat-icon.blue{background:#eff6ff;color:#2563eb}
+.stat-icon.emerald{background:#ecfdf5;color:#059669}
+.stat-icon.cyan{background:#f0f9ff;color:#0284c7}
 .stat-icon.navy{background:#e7eff2;color:#183e4e}
 .stat-icon.amber{background:#fdf2df;color:#b47c2a}
 .stat-icon.rose{background:#fbe9e7;color:#c05746}
@@ -29,10 +33,14 @@
 }
 
 .main-content {
-  flex: 1;
+  flex: 1 1 0%;
   min-width: 0;
+  max-width: none;
+  margin: 0 !important;
   display: flex;
   flex-direction: column;
+  align-self: flex-start;
+  width: 100%;
 }
 
 .topbar {
@@ -49,6 +57,56 @@
   padding: 36px 4.3% 24px;
   box-sizing: border-box;
 }
+
+.audit-role-banner {
+  margin: 0 4.3% 16px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  box-sizing: border-box;
+}
+
+.audit-role-banner.admin {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.audit-role-banner.operator {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.audit-actor-select {
+  padding: 4px 10px;
+  font-size: 11.5px;
+  border-radius: 5px;
+  border: 1px solid #c9e2ff;
+  background: #ffffff;
+  color: #183e4e;
+  font-weight: 600;
+}
+
+.search-match-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8faf9;
+  border: 1px solid #e1ede9;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  transition: background 0.15s ease;
+}
+
+.search-match-card:hover {
+  background: #f0f7f5;
+}
+
 
 
 .theme-toggle-btn {
@@ -437,23 +495,82 @@
   color: #e6f4f6;
 }
 
+[data-theme="dark"] .stat-icon.teal {
+  background: #13393b;
+  color: #2dd4bf;
+}
+
+[data-theme="dark"] .stat-icon.blue {
+  background: #152b47;
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .stat-icon.emerald {
+  background: #10382a;
+  color: #34d399;
+}
+
+[data-theme="dark"] .stat-icon.cyan {
+  background: #133347;
+  color: #38bdf8;
+}
+
 [data-theme="dark"] .stat-icon.navy {
   background: #1b2f38;
+  color: #8da4a8;
 }
 
 [data-theme="dark"] .stat-icon.amber {
   background: #352712;
-}
-
-[data-theme="dark"] .stat-icon.teal {
-  background: #14353a;
+  color: #fbbf24;
 }
 
 [data-theme="dark"] .stat-icon.rose {
   background: #36191b;
+  color: #f87171;
+}
+
+[data-theme="dark"] .audit-role-banner.admin {
+  background: #11263c;
+  border: 1px solid #1e3e60;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .audit-role-banner.operator {
+  background: #0f2c21;
+  border: 1px solid #1a4f3b;
+  color: #86efac;
+}
+
+[data-theme="dark"] .audit-role-banner strong {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .audit-actor-select {
+  background: #162f4a !important;
+  border-color: #2b5077 !important;
+  color: #e2eff2 !important;
+}
+
+[data-theme="dark"] .search-match-card {
+  background: #14252e;
+  border-color: #1e3a47;
+}
+
+[data-theme="dark"] .search-match-card:hover {
+  background: #1a303b;
+}
+
+[data-theme="dark"] .search-match-card strong {
+  color: #e6f4f6 !important;
+}
+
+[data-theme="dark"] .search-match-card span {
+  color: #8da4a8 !important;
 }
 
 [data-theme="dark"] footer {
   color: #668288;
 }
+
 
