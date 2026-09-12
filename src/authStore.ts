@@ -1,4 +1,4 @@
-import { db, doc, setDoc, deleteDoc, getDocs, collection } from './firebase'
+import { db, doc, setDoc, deleteDoc, getDocs, collection, withTimeout } from './firebase'
 
 export type UserRole = 'ADMIN' | 'OPERATOR'
 
@@ -50,27 +50,31 @@ const DEFAULT_USERS: User[] = [
   },
 ]
 
-// Sync user to Firestore in background
+// Sync user to Firestore in background (non-blocking)
 export async function syncUserToFirestore(user: User) {
   try {
     const userRef = doc(db, 'users', user.id)
-    await setDoc(userRef, {
-      id: user.id,
-      name: user.name,
-      email: user.email.toLowerCase().trim(),
-      passwordHash: user.passwordHash,
-      password: user.passwordHash, // compatibility
-      role: user.role,
-      active: user.active ?? true,
-      laboratory: user.laboratory || 'Central Standards Laboratory',
-      department: user.department || 'Precision Calibration Division',
-      jobTitle: user.jobTitle || 'Metrologist',
-      phone: user.phone || '',
-      createdAt: user.createdAt || new Date().toISOString(),
-      lastLogin: user.lastLogin || new Date().toISOString(),
-    }, { merge: true })
+    await withTimeout(
+      setDoc(userRef, {
+        id: user.id,
+        name: user.name,
+        email: user.email.toLowerCase().trim(),
+        passwordHash: user.passwordHash,
+        password: user.passwordHash, // compatibility
+        role: user.role,
+        active: user.active ?? true,
+        laboratory: user.laboratory || 'Central Standards Laboratory',
+        department: user.department || 'Precision Calibration Division',
+        jobTitle: user.jobTitle || 'Metrologist',
+        phone: user.phone || '',
+        createdAt: user.createdAt || new Date().toISOString(),
+        lastLogin: user.lastLogin || new Date().toISOString(),
+      }, { merge: true }),
+      3000,
+      undefined
+    )
   } catch (err) {
-    console.warn('Firestore sync user error:', err)
+    console.warn('Firestore sync user background warning:', err)
   }
 }
 
@@ -79,7 +83,7 @@ export function getStoredUsers(): User[] {
     const raw = localStorage.getItem(STORAGE_USERS_KEY)
     if (!raw) {
       localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(DEFAULT_USERS))
-      DEFAULT_USERS.forEach(syncUserToFirestore)
+      DEFAULT_USERS.forEach((u) => syncUserToFirestore(u).catch(() => {}))
       return DEFAULT_USERS
     }
     const parsed = JSON.parse(raw) as User[]
@@ -96,7 +100,11 @@ export function getStoredUsers(): User[] {
 
 export async function loadUsersFromFirestore(): Promise<User[]> {
   try {
-    const snapshot = await getDocs(collection(db, 'users'))
+    const snapshot = await withTimeout(getDocs(collection(db, 'users')), 2000, null)
+    if (!snapshot) {
+      return getStoredUsers()
+    }
+
     const list: User[] = []
     snapshot.forEach((d) => {
       const data = d.data() as Record<string, unknown>
@@ -189,7 +197,7 @@ export async function registerNewUser(
     return { success: false, error: 'Password must be at least 6 characters long.' }
   }
 
-  // Check cloud and local users
+  // Check local and cloud users (fast with timeout)
   const currentUsers = await loadUsersFromFirestore()
   if (currentUsers.some((u) => u.email.toLowerCase() === normalizedEmail)) {
     return { success: false, error: 'An account with this email address already exists.' }
@@ -213,7 +221,10 @@ export async function registerNewUser(
 
   const updated = [newUser, ...currentUsers.filter((u) => u.email.toLowerCase() !== normalizedEmail)]
   saveStoredUsers(updated)
-  await syncUserToFirestore(newUser)
+  setCurrentSession(newUser)
+  // Background fire-and-forget sync to Firestore
+  syncUserToFirestore(newUser).catch(() => {})
+
   return { success: true, user: newUser }
 }
 
@@ -256,12 +267,13 @@ export async function adminCreateUser(
 
   const updated = [newUser, ...currentUsers.filter((u) => u.email.toLowerCase() !== normalizedEmail)]
   saveStoredUsers(updated)
-  await syncUserToFirestore(newUser)
+  // Background fire-and-forget sync
+  syncUserToFirestore(newUser).catch(() => {})
   return { success: true, user: newUser }
 }
 
 /**
- * Robust Authenticate User with Direct Firestore Query & Local Fallback
+ * Robust Authenticate User with Fast Local Check & Cloud Fallback
  */
 export async function authenticateUser(
   email: string,
@@ -270,45 +282,47 @@ export async function authenticateUser(
   const normalizedEmail = email.toLowerCase().trim()
   const trimmedPassword = password.trim()
 
-  // 1. First, check live Firestore cloud records
   let matchedUser: User | null = null
 
-  try {
-    const snapshot = await getDocs(collection(db, 'users'))
-    snapshot.forEach((d) => {
-      const data = d.data() as Record<string, unknown>
-      const docEmail = ((data?.email as string) || '').toLowerCase().trim()
-      if (docEmail === normalizedEmail) {
-        matchedUser = {
-          id: (data.id as string) || d.id,
-          name: (data.name as string) || (data.displayName as string) || 'Personnel',
-          email: docEmail,
-          passwordHash:
-            (data.passwordHash as string) ||
-            (data.password as string) ||
-            (data.password_hash as string) ||
-            '',
-          role: data.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR',
-          active: data.active !== false,
-          laboratory: (data.laboratory as string) || 'Central Standards Laboratory',
-          department: (data.department as string) || 'Precision Calibration Division',
-          jobTitle: (data.jobTitle as string) || 'Metrologist',
-          phone: (data.phone as string) || '',
-          createdAt: (data.createdAt as string) || new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-        }
-      }
-    })
-  } catch (err) {
-    console.warn('Firestore direct auth query failed, using offline fallback:', err)
+  // 1. Check local storage cache first for instant response
+  const localUsers = getStoredUsers()
+  const foundLocal = localUsers.find((u) => u.email.toLowerCase() === normalizedEmail)
+  if (foundLocal) {
+    matchedUser = foundLocal
   }
 
-  // 2. Fallback to local storage if not found in Firestore or Firestore was unreachable
+  // 2. If not found locally, query live Firestore with timeout
   if (!matchedUser) {
-    const localUsers = getStoredUsers()
-    const foundLocal = localUsers.find((u) => u.email.toLowerCase() === normalizedEmail)
-    if (foundLocal) {
-      matchedUser = foundLocal
+    try {
+      const snapshot = await withTimeout(getDocs(collection(db, 'users')), 2500, null)
+      if (snapshot) {
+        snapshot.forEach((d) => {
+          const data = d.data() as Record<string, unknown>
+          const docEmail = ((data?.email as string) || '').toLowerCase().trim()
+          if (docEmail === normalizedEmail) {
+            matchedUser = {
+              id: (data.id as string) || d.id,
+              name: (data.name as string) || (data.displayName as string) || 'Personnel',
+              email: docEmail,
+              passwordHash:
+                (data.passwordHash as string) ||
+                (data.password as string) ||
+                (data.password_hash as string) ||
+                '',
+              role: data.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR',
+              active: data.active !== false,
+              laboratory: (data.laboratory as string) || 'Central Standards Laboratory',
+              department: (data.department as string) || 'Precision Calibration Division',
+              jobTitle: (data.jobTitle as string) || 'Metrologist',
+              phone: (data.phone as string) || '',
+              createdAt: (data.createdAt as string) || new Date().toISOString(),
+              lastLogin: new Date().toISOString(),
+            }
+          }
+        })
+      }
+    } catch (err) {
+      console.warn('Firestore direct auth query failed, using offline fallback:', err)
     }
   }
 
@@ -337,7 +351,7 @@ export async function authenticateUser(
   
   saveStoredUsers(updatedList)
   setCurrentSession(updatedUser)
-  syncUserToFirestore(updatedUser)
+  syncUserToFirestore(updatedUser).catch(() => {})
 
   return { success: true, user: updatedUser }
 }
