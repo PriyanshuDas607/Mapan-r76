@@ -137,6 +137,9 @@ export default function LoginView({ onLogin }: Props) {
               type="button"
               onClick={() => {
                 setTab('signin')
+                setName('')
+                setEmail('')
+                setPassword('')
                 setError('')
                 setSuccessMsg('')
               }}
@@ -163,6 +166,9 @@ export default function LoginView({ onLogin }: Props) {
               type="button"
               onClick={() => {
                 setTab('signup')
+                setName('')
+                setEmail('')
+                setPassword('')
                 setError('')
                 setSuccessMsg('')
               }}
@@ -201,17 +207,18 @@ export default function LoginView({ onLogin }: Props) {
           </div>
 
           {tab === 'signin' ? (
-            <form onSubmit={handleSignIn}>
+            <form onSubmit={handleSignIn} autoComplete="off">
               <label>
                 Official Email Address
                 <div className="input-wrap">
                   <Mail size={16} />
                   <input
                     type="email"
+                    name="signin_email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="officer@laboratory.gov"
-                    autoComplete="email"
+                    autoComplete="off"
                   />
                 </div>
               </label>
@@ -222,10 +229,11 @@ export default function LoginView({ onLogin }: Props) {
                   <LockKeyhole size={16} />
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    name="signin_password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="Enter your password"
-                    autoComplete="current-password"
+                    autoComplete="off"
                   />
                   <button
                     type="button"
@@ -246,17 +254,18 @@ export default function LoginView({ onLogin }: Props) {
               </button>
             </form>
           ) : (
-            <form onSubmit={handleSignUp}>
+            <form onSubmit={handleSignUp} autoComplete="off">
               <label>
                 Full Name *
                 <div className="input-wrap">
                   <UserCheck size={16} />
                   <input
                     type="text"
+                    name="reg_fullname"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="e.g. Rohit Sharma"
-                    autoComplete="name"
+                    autoComplete="off"
                   />
                 </div>
               </label>
@@ -267,10 +276,11 @@ export default function LoginView({ onLogin }: Props) {
                   <Mail size={16} />
                   <input
                     type="email"
+                    name="reg_email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="rohit@laboratory.gov"
-                    autoComplete="email"
+                    autoComplete="off"
                   />
                 </div>
               </label>
@@ -307,6 +317,7 @@ export default function LoginView({ onLogin }: Props) {
                   <LockKeyhole size={16} />
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    name="reg_new_password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="Create a strong password"
