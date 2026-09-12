@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import {
+  initializeFirestore,
   getFirestore,
   collection,
   doc,
@@ -29,7 +30,18 @@ const isConfigured = Boolean(firebaseConfig.apiKey && !firebaseConfig.apiKey.inc
 const app = getApps().length === 0 
   ? (isConfigured ? initializeApp(firebaseConfig) : initializeApp({ apiKey: 'demo-api-key', projectId: 'demo-mapan' })) 
   : getApp()
-export const db = getFirestore(app)
+
+// Use standard HTTPS long-polling to prevent WebSocket blocking on college/mobile/proxy networks
+let dbInstance
+try {
+  dbInstance = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  })
+} catch {
+  dbInstance = getFirestore(app)
+}
+
+export const db = dbInstance
 export const auth = getAuth(app)
 
 /**

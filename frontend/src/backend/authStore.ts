@@ -61,11 +61,7 @@ export async function syncUserToFirestore(user: User): Promise<boolean> {
       updatedAt: new Date().toISOString(),
     })
 
-    await withTimeout(
-      setDoc(userRef, payload, { merge: true }),
-      8000,
-      undefined
-    )
+    await setDoc(userRef, payload, { merge: true })
     console.log(`[Firestore] Successfully synchronized user ${user.email} (${user.id})`)
     return true
   } catch (err) {
@@ -255,10 +251,8 @@ export async function registerNewUser(
   saveStoredUsers(updated)
   setCurrentSession(newUser)
 
-  // Direct, non-blocking asynchronous Firestore write with background confirmation
-  syncUserToFirestore(newUser).catch((err) => {
-    console.error('[Firestore] User background sync error:', err)
-  })
+  // Direct, reliable Firestore write
+  await syncUserToFirestore(newUser)
 
   return { success: true, user: newUser }
 }
@@ -304,9 +298,7 @@ export async function adminCreateUser(
   saveStoredUsers(updated)
 
   // Direct Firestore write
-  syncUserToFirestore(newUser).catch((err) => {
-    console.error('[Firestore] Admin create user sync error:', err)
-  })
+  await syncUserToFirestore(newUser)
 
   return { success: true, user: newUser }
 }
