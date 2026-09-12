@@ -33,12 +33,37 @@ export const db = getFirestore(app)
 export const auth = getAuth(app)
 
 /**
- * Executes a promise with an automatic timeout fallback to ensure the UI never hangs.
+ * Recursively removes all undefined values from objects/arrays to guarantee Firestore compatibility.
  */
-export async function withTimeout<T>(promise: Promise<T>, ms = 2500, fallback: T): Promise<T> {
+export function sanitizeForFirestore<T>(val: T): T {
+  if (val === null || val === undefined) {
+    return null as unknown as T
+  }
+  if (Array.isArray(val)) {
+    return val.map((item) => sanitizeForFirestore(item)) as unknown as T
+  }
+  if (typeof val === 'object' && !(val instanceof Date)) {
+    const cleaned: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+      if (v !== undefined) {
+        cleaned[k] = sanitizeForFirestore(v)
+      }
+    }
+    return cleaned as T
+  }
+  return val
+}
+
+/**
+ * Executes a promise with an automatic timeout fallback to ensure UI resilience.
+ */
+export async function withTimeout<T>(promise: Promise<T>, ms = 8000, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout>
   const timeoutPromise = new Promise<T>((resolve) => {
-    timer = setTimeout(() => resolve(fallback), ms)
+    timer = setTimeout(() => {
+      console.warn(`[Firestore] Operation reached timeout threshold (${ms}ms)`)
+      resolve(fallback)
+    }, ms)
   })
 
   try {
@@ -47,10 +72,11 @@ export async function withTimeout<T>(promise: Promise<T>, ms = 2500, fallback: T
     return result
   } catch (err) {
     clearTimeout(timer!)
-    console.warn(`Firestore operation timed out or failed (${ms}ms), using local fallback:`, err)
+    console.error(`[Firestore] Operation encountered error:`, err)
     return fallback
   }
 }
 
 export { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, orderBy }
+
 

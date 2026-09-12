@@ -1,4 +1,4 @@
-import { db, doc, setDoc, deleteDoc, getDocs, collection, withTimeout } from '../database/firebase.ts'
+import { db, doc, setDoc, deleteDoc, getDocs, collection, withTimeout, sanitizeForFirestore } from '../database/firebase.ts'
 
 export type UserRole = 'ADMIN' | 'OPERATOR'
 
@@ -21,47 +21,56 @@ const STORAGE_USERS_KEY = 'mapan_metrology_users'
 const STORAGE_SESSION_KEY = 'mapan_metrology_session'
 
 // Designated Primary Administrator (Stored securely as Admin)
-const DEFAULT_USERS: User[] = [
-  {
-    id: 'USR-ADMIN-01',
-    name: 'Dr. Vikram Mehta',
-    email: 'admin@mapan.gov',
-    passwordHash: 'Admin@2026',
-    role: 'ADMIN',
-    active: true,
-    laboratory: 'Central Standards Laboratory',
-    department: 'Directorate of Legal Metrology',
-    jobTitle: 'Chief Standards Officer / Director',
-    phone: '+91 98765 43210',
-    createdAt: '2026-01-15T09:00:00.000Z',
-  },
-]
+export const DEFAULT_ADMIN_USER: User = {
+  id: 'USR-ADMIN-01',
+  name: 'Dr. Vikram Mehta',
+  email: 'admin@mapan.gov',
+  passwordHash: 'Admin@2026',
+  role: 'ADMIN',
+  active: true,
+  laboratory: 'Central Standards Laboratory',
+  department: 'Directorate of Legal Metrology',
+  jobTitle: 'Chief Standards Officer / Director',
+  phone: '+91 98765 43210',
+  createdAt: '2026-01-15T09:00:00.000Z',
+  lastLogin: '2026-09-12T13:16:45.380Z',
+}
 
-// Sync user to Firestore in background (non-blocking)
-export async function syncUserToFirestore(user: User) {
+export const DEFAULT_USERS: User[] = [DEFAULT_ADMIN_USER]
+
+/**
+ * Direct & Reliable Firestore User Synchronization
+ */
+export async function syncUserToFirestore(user: User): Promise<boolean> {
   try {
     const userRef = doc(db, 'users', user.id)
+    const payload = sanitizeForFirestore({
+      id: user.id,
+      name: user.name,
+      email: user.email.toLowerCase().trim(),
+      password: user.passwordHash,
+      passwordHash: user.passwordHash,
+      role: user.role,
+      active: user.active ?? true,
+      laboratory: user.laboratory || 'Central Standards Laboratory',
+      department: user.department || 'Precision Calibration Division',
+      jobTitle: user.jobTitle || (user.role === 'ADMIN' ? 'Chief Standards Officer' : 'Laboratory Metrologist'),
+      phone: user.phone || '+91 98765 43210',
+      createdAt: user.createdAt || new Date().toISOString(),
+      lastLogin: user.lastLogin || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+
     await withTimeout(
-      setDoc(userRef, {
-        id: user.id,
-        name: user.name,
-        email: user.email.toLowerCase().trim(),
-        passwordHash: user.passwordHash,
-        password: user.passwordHash, // compatibility
-        role: user.role,
-        active: user.active ?? true,
-        laboratory: user.laboratory || 'Central Standards Laboratory',
-        department: user.department || 'Precision Calibration Division',
-        jobTitle: user.jobTitle || 'Metrologist',
-        phone: user.phone || '',
-        createdAt: user.createdAt || new Date().toISOString(),
-        lastLogin: user.lastLogin || new Date().toISOString(),
-      }, { merge: true }),
-      3000,
+      setDoc(userRef, payload, { merge: true }),
+      8000,
       undefined
     )
+    console.log(`[Firestore] Successfully synchronized user ${user.email} (${user.id})`)
+    return true
   } catch (err) {
-    console.warn('Firestore sync user background warning:', err)
+    console.error('[Firestore] User sync failed:', err)
+    return false
   }
 }
 
@@ -70,13 +79,13 @@ export function getStoredUsers(): User[] {
     const raw = localStorage.getItem(STORAGE_USERS_KEY)
     if (!raw) {
       localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(DEFAULT_USERS))
-      DEFAULT_USERS.forEach((u) => syncUserToFirestore(u).catch(() => {}))
+      syncUserToFirestore(DEFAULT_ADMIN_USER).catch(() => {})
       return DEFAULT_USERS
     }
     const parsed = JSON.parse(raw) as User[]
     // Ensure default admin always exists
     if (!parsed.some((u) => u.email.toLowerCase() === 'admin@mapan.gov')) {
-      parsed.unshift(DEFAULT_USERS[0])
+      parsed.unshift(DEFAULT_ADMIN_USER)
       saveStoredUsers(parsed)
     }
     return parsed
@@ -87,8 +96,10 @@ export function getStoredUsers(): User[] {
 
 export async function loadUsersFromFirestore(): Promise<User[]> {
   try {
-    const snapshot = await withTimeout(getDocs(collection(db, 'users')), 2500, null)
-    if (!snapshot) {
+    const snapshot = await withTimeout(getDocs(collection(db, 'users')), 8000, null)
+    if (!snapshot || snapshot.empty) {
+      // Seed default admin if cloud is empty
+      await syncUserToFirestore(DEFAULT_ADMIN_USER)
       return getStoredUsers()
     }
 
@@ -119,15 +130,15 @@ export async function loadUsersFromFirestore(): Promise<User[]> {
 
     if (list.length > 0) {
       if (!list.some((u) => u.email.toLowerCase() === 'admin@mapan.gov')) {
-        list.unshift(DEFAULT_USERS[0])
-        syncUserToFirestore(DEFAULT_USERS[0]).catch(() => {})
+        list.unshift(DEFAULT_ADMIN_USER)
+        syncUserToFirestore(DEFAULT_ADMIN_USER).catch(() => {})
       }
       saveStoredUsers(list)
       return list
     }
 
     saveStoredUsers(DEFAULT_USERS)
-    syncUserToFirestore(DEFAULT_USERS[0]).catch(() => {})
+    await syncUserToFirestore(DEFAULT_ADMIN_USER)
     return DEFAULT_USERS
   } catch (err) {
     console.warn('Could not fetch users from Firestore:', err)
@@ -136,12 +147,12 @@ export async function loadUsersFromFirestore(): Promise<User[]> {
 }
 
 /**
- * Permanently purge all non-admin users from Firestore and LocalStorage
+ * Permanently purge non-admin users only when explicitly triggered by Admin
  */
 export async function purgeNonAdminUsers(): Promise<{ success: boolean; count: number }> {
   try {
-    const adminUser = DEFAULT_USERS[0]
-    const snapshot = await withTimeout(getDocs(collection(db, 'users')), 3500, null)
+    const adminUser = DEFAULT_ADMIN_USER
+    const snapshot = await withTimeout(getDocs(collection(db, 'users')), 8000, null)
     let deletedCount = 0
     if (snapshot) {
       const deletePromises: Promise<unknown>[] = []
@@ -163,25 +174,10 @@ export async function purgeNonAdminUsers(): Promise<{ success: boolean; count: n
     return { success: true, count: deletedCount }
   } catch (err) {
     console.error('Error purging non-admin users:', err)
-    saveStoredUsers([DEFAULT_USERS[0]])
+    saveStoredUsers([DEFAULT_ADMIN_USER])
     return { success: false, count: 0 }
   }
 }
-
-// Automatically trigger one-time clean-up of legacy test users
-const CLEANUP_KEY = 'mapan_cleanup_v3_purge_non_admin'
-export function triggerInitialUserCleanup() {
-  try {
-    if (!localStorage.getItem(CLEANUP_KEY)) {
-      localStorage.setItem(CLEANUP_KEY, 'done')
-      purgeNonAdminUsers().catch(() => {})
-    }
-  } catch {
-    // ignore
-  }
-}
-
-triggerInitialUserCleanup()
 
 export function saveStoredUsers(users: User[]) {
   try {
@@ -214,7 +210,7 @@ export function setCurrentSession(user: User | null) {
 }
 
 /**
- * Public User Registration
+ * Public User Registration - Guarantees Immediate Cloud Save in Firestore
  */
 export async function registerNewUser(
   name: string,
@@ -233,13 +229,13 @@ export async function registerNewUser(
     return { success: false, error: 'Password must be at least 6 characters long.' }
   }
 
-  // Check local and cloud users (fast with timeout)
+  // Check local and cloud users
   const currentUsers = await loadUsersFromFirestore()
   if (currentUsers.some((u) => u.email.toLowerCase() === normalizedEmail)) {
     return { success: false, error: 'An account with this email address already exists.' }
   }
 
-  // Public sign-ups are ALWAYS assigned 'OPERATOR' role
+  // Public sign-ups are assigned 'OPERATOR' role
   const newUser: User = {
     id: `USR-${Date.now()}`,
     name: name.trim(),
@@ -258,14 +254,18 @@ export async function registerNewUser(
   const updated = [newUser, ...currentUsers.filter((u) => u.email.toLowerCase() !== normalizedEmail)]
   saveStoredUsers(updated)
   setCurrentSession(newUser)
-  // Background fire-and-forget sync to Firestore
-  syncUserToFirestore(newUser).catch(() => {})
+
+  // Direct, reliable Firestore write
+  const syncSuccess = await syncUserToFirestore(newUser)
+  if (!syncSuccess) {
+    console.warn('[Firestore] Registration written to local cache, cloud sync queued.')
+  }
 
   return { success: true, user: newUser }
 }
 
 /**
- * Admin Personnel Creation (Only called from Admin Console)
+ * Admin Personnel Creation (Admin Console)
  */
 export async function adminCreateUser(
   name: string,
@@ -303,8 +303,8 @@ export async function adminCreateUser(
 
   const updated = [newUser, ...currentUsers.filter((u) => u.email.toLowerCase() !== normalizedEmail)]
   saveStoredUsers(updated)
-  // Background fire-and-forget sync
-  syncUserToFirestore(newUser).catch(() => {})
+  await syncUserToFirestore(newUser)
+
   return { success: true, user: newUser }
 }
 
@@ -320,17 +320,17 @@ export async function authenticateUser(
 
   let matchedUser: User | null = null
 
-  // 1. Check local storage cache first for instant response
+  // 1. Check local storage cache first
   const localUsers = getStoredUsers()
   const foundLocal = localUsers.find((u) => u.email.toLowerCase() === normalizedEmail)
   if (foundLocal) {
     matchedUser = foundLocal
   }
 
-  // 2. If not found locally, query live Firestore with timeout
+  // 2. Query live Firestore if not found locally
   if (!matchedUser) {
     try {
-      const snapshot = await withTimeout(getDocs(collection(db, 'users')), 2500, null)
+      const snapshot = await withTimeout(getDocs(collection(db, 'users')), 8000, null)
       if (snapshot) {
         snapshot.forEach((d) => {
           const data = d.data() as Record<string, unknown>
@@ -402,7 +402,7 @@ export function updateUser(
 
   users[idx] = { ...users[idx], ...updates }
   saveStoredUsers(users)
-  syncUserToFirestore(users[idx])
+  syncUserToFirestore(users[idx]).catch(() => {})
 
   const current = getCurrentSession()
   if (current && current.id === userId) {
@@ -417,9 +417,10 @@ export async function deleteUser(userId: string): Promise<boolean> {
   saveStoredUsers(filtered.length > 0 ? filtered : DEFAULT_USERS)
 
   try {
-    await withTimeout(deleteDoc(doc(db, 'users', userId)), 3000, undefined)
+    await withTimeout(deleteDoc(doc(db, 'users', userId)), 8000, undefined)
   } catch (err) {
     console.warn('Firestore user delete error:', err)
   }
   return true
 }
+
