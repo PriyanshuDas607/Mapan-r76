@@ -24,7 +24,6 @@ import {
   Activity,
   Bell,
   FileCheck2,
-  HelpCircle,
   History,
   LayoutDashboard,
   Search,
@@ -33,6 +32,8 @@ import {
   Weight,
   Printer,
   Trash2,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import './App.css'
 import './views.css'
@@ -67,7 +68,20 @@ export type AuditEvent = {
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => getCurrentSession())
   const [page, setPage] = useState<Page>('Overview')
-  const [help, setHelp] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('mapan_theme')
+    if (saved === 'dark' || saved === 'light') return saved
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('mapan_theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
 
   // Real dynamic workspace records synced with Firestore
   const [instruments, setInstruments] = useState<Instrument[]>([])
@@ -279,10 +293,16 @@ export default function App() {
                 ADMIN SUPER-USER
               </span>
             )}
-            <button className="icon-button" onClick={() => setHelp(!help)} aria-label="Help">
-              <HelpCircle size={16} />
+            <button
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+              title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+            >
+              {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+              <span className="theme-toggle-text">{theme === 'light' ? 'Dark' : 'Light'}</span>
             </button>
-            <button className="notification" aria-label="Notifications">
+            <button className="notification" aria-label="Notifications" title="Notifications">
               <Bell size={16} />
             </button>
             <button
@@ -295,18 +315,6 @@ export default function App() {
             </button>
           </div>
         </header>
-
-        {help && (
-          <div className="help-popover">
-            <strong>Metrology Help</strong>
-            <p>
-              {isAdmin
-                ? 'As an Administrator, you have full CRUD access over Instruments, Users, System Rules, and Audit Logs.'
-                : 'Register instruments, record applied loads vs indications, and seal verified certificates.'}
-            </p>
-            <button onClick={() => setHelp(false)}>Close</button>
-          </div>
-        )}
 
         {page === 'Overview' && (
           <Dashboard
