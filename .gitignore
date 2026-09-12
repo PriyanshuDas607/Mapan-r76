@@ -9,12 +9,14 @@ lerna-debug.log*
 
 # Dependencies
 node_modules/
+frontend/node_modules/
 backend/node_modules/
 backend/dist/
 
 # Build artifacts
 dist/
 dist-ssr/
+frontend/dist/
 .netlify/
 *.local
 
@@ -22,8 +24,9 @@ dist-ssr/
 .env
 .env.local
 .env.*.local
+frontend/.env
 backend/.env
-.env.example
+
 # Editor & OS files
 .vscode/*
 !.vscode/extensions.json
