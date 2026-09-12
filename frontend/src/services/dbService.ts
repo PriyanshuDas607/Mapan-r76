@@ -8,9 +8,9 @@ import {
   withTimeout,
   sanitizeForFirestore,
 } from './firebase.ts'
-import type { Instrument } from '../frontend/views/InstrumentRegisterView.tsx'
-import type { ReportData } from '../frontend/views/CalibrationReport.tsx'
-import type { AuditEvent } from '../frontend/App.tsx'
+import type { Instrument } from '../views/InstrumentRegisterView.tsx'
+import type { ReportData } from '../views/CalibrationReport.tsx'
+import type { AuditEvent } from '../App.tsx'
 
 // ==========================================
 // DEFAULT STANDARDIZED SEED RECORDS

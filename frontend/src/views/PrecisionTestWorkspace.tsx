@@ -3,13 +3,13 @@ import { FileText, Printer, Sliders, CheckCircle2, AlertTriangle, ShieldCheck, S
 import CalibrationReport from './CalibrationReport.tsx'
 import type { ReportData, InstrumentInfo, ObservationRow } from './CalibrationReport.tsx'
 import type { Instrument } from './InstrumentRegisterView.tsx'
-import { generateSHA256Hash } from '../../backend/cryptoUtils.ts'
+import { generateSHA256Hash } from '../utils/cryptoUtils.ts'
 import '../styles/workflow.css'
 
-import { evaluateWeighingReading, validateInstrumentClassification, OIML_CLAUSES } from '../../backend/oimlEngine.ts'
-import type { AccuracyClass } from '../../backend/oimlEngine.ts'
-import { autoFetchEnvironmentalData, calculateAirDensity } from '../../backend/environmentalService.ts'
-import type { EnvironmentalData } from '../../backend/environmentalService.ts'
+import { evaluateWeighingReading, validateInstrumentClassification, OIML_CLAUSES } from '../services/oimlEngine.ts'
+import type { AccuracyClass } from '../services/oimlEngine.ts'
+import { autoFetchEnvironmentalData, calculateAirDensity } from '../services/environmentalService.ts'
+import type { EnvironmentalData } from '../services/environmentalService.ts'
 import { CloudSun, RefreshCw } from 'lucide-react'
 
 type Row = { id: number; load: string; indication: string }

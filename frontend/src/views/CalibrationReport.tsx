@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle2, AlertTriangle, Printer, X, ShieldCheck } from 'lucide-react'
-import { generateQRCodeDataURL } from '../../backend/cryptoUtils.ts'
+import { generateQRCodeDataURL } from '../utils/cryptoUtils.ts'
 import '../styles/report.css'
 
 export type InstrumentInfo = {

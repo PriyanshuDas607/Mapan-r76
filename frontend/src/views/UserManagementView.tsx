@@ -17,8 +17,8 @@ import {
   updateUser,
   deleteUser,
   purgeNonAdminUsers,
-} from '../../backend/authStore.ts'
-import type { User, UserRole } from '../../backend/authStore.ts'
+} from '../services/authStore.ts'
+import type { User, UserRole } from '../services/authStore.ts'
 import '../styles/views.css'
 
 type Props = {

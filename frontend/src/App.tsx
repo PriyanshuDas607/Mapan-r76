@@ -7,9 +7,9 @@ import type { ReportData } from './views/CalibrationReport.tsx'
 import LoginView from './views/LoginView.tsx'
 import UserManagementView from './views/UserManagementView.tsx'
 import { AccountSettings, SettingsView } from './views/SettingsView.tsx'
-import { getCurrentSession, setCurrentSession } from '../backend/authStore.ts'
-import type { User } from '../backend/authStore.ts'
-import { generateSHA256Hash } from '../backend/cryptoUtils.ts'
+import { getCurrentSession, setCurrentSession } from './services/authStore.ts'
+import type { User } from './services/authStore.ts'
+import { generateSHA256Hash } from './utils/cryptoUtils.ts'
 import {
   syncInstrumentToFirestore,
   deleteInstrumentFromFirestore,
@@ -19,7 +19,7 @@ import {
   loadReportsFromFirestore,
   syncAuditLogToFirestore,
   loadAuditLogsFromFirestore,
-} from '../database/dbService.ts'
+} from './services/dbService.ts'
 import {
   Activity,
   Bell,
