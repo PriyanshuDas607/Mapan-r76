@@ -6,6 +6,7 @@ import {
   XCircle,
   Edit2,
   Trash2,
+  RotateCcw,
 } from 'lucide-react'
 import {
   getStoredUsers,
@@ -13,6 +14,7 @@ import {
   adminCreateUser,
   updateUser,
   deleteUser,
+  purgeNonAdminUsers,
 } from './authStore'
 import type { User, UserRole } from './authStore'
 import './views.css'
@@ -31,6 +33,7 @@ export default function UserManagementView({
   const [roleFilter, setRoleFilter] = useState<string>('ALL')
   const [openAddModal, setOpenAddModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [purging, setPurging] = useState(false)
 
   // Load from Firestore on mount
   useEffect(() => {
@@ -51,6 +54,16 @@ export default function UserManagementView({
     loadUsersFromFirestore().then((cloudUsers) => {
       setUsers(cloudUsers)
     })
+  }
+
+  const handlePurgeAll = async () => {
+    if (confirm('Are you sure you want to permanently delete ALL non-admin accounts from Firebase and local database? Only Dr. Vikram Mehta (Admin) will be preserved.')) {
+      setPurging(true)
+      const res = await purgeNonAdminUsers()
+      onAddAuditEvent('ADMIN_PURGE_USERS', `Admin purged ${res.count} personnel accounts from Firebase registry`)
+      refreshUsers()
+      setPurging(false)
+    }
   }
 
   const handleAddUser = async () => {
@@ -115,14 +128,14 @@ export default function UserManagementView({
     refreshUsers()
   }
 
-  const handleDelete = (user: User) => {
+  const handleDelete = async (user: User) => {
     if (user.id === currentUserId) {
       alert('You cannot delete your own active administrator account.')
       return
     }
 
-    if (confirm(`Are you sure you want to delete user ${user.name} (${user.email})?`)) {
-      deleteUser(user.id)
+    if (confirm(`Are you sure you want to permanently delete user ${user.name} (${user.email}) from Firebase and system registry?`)) {
+      await deleteUser(user.id)
       onAddAuditEvent('ADMIN_DELETE_USER', `Deleted user account ${user.name} (${user.email})`)
       refreshUsers()
     }
@@ -147,10 +160,22 @@ export default function UserManagementView({
             Manage authorized laboratory personnel, assign role permissions (Admin vs Metrologist), and review access status.
           </p>
         </div>
-        <button className="button primary" onClick={() => setOpenAddModal(true)}>
-          <UserPlus size={14} style={{ marginRight: '5px' }} />
-          ＋ Add Personnel
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className="button secondary"
+            onClick={handlePurgeAll}
+            disabled={purging}
+            title="Delete all non-admin test users from Firebase & local cache"
+            style={{ color: '#cf222e' }}
+          >
+            <RotateCcw size={14} style={{ marginRight: '5px' }} />
+            {purging ? 'Purging...' : 'Purge All Non-Admin Users'}
+          </button>
+          <button className="button primary" onClick={() => setOpenAddModal(true)}>
+            <UserPlus size={14} style={{ marginRight: '5px' }} />
+            ＋ Add Personnel
+          </button>
+        </div>
       </div>
 
       <section className="view-toolbar">

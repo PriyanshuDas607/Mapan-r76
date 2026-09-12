@@ -35,19 +35,6 @@ const DEFAULT_USERS: User[] = [
     phone: '+91 98765 43210',
     createdAt: '2026-01-15T09:00:00.000Z',
   },
-  {
-    id: 'USR-OPERATOR-01',
-    name: 'Ananya Rao',
-    email: 'ananya@mapan.gov',
-    passwordHash: 'Ananya@2026',
-    role: 'OPERATOR',
-    active: true,
-    laboratory: 'Central Standards Laboratory',
-    department: 'Precision Calibration Division',
-    jobTitle: 'Senior Metrologist',
-    phone: '+91 98123 45678',
-    createdAt: '2026-02-01T10:30:00.000Z',
-  },
 ]
 
 // Sync user to Firestore in background (non-blocking)
@@ -100,7 +87,7 @@ export function getStoredUsers(): User[] {
 
 export async function loadUsersFromFirestore(): Promise<User[]> {
   try {
-    const snapshot = await withTimeout(getDocs(collection(db, 'users')), 2000, null)
+    const snapshot = await withTimeout(getDocs(collection(db, 'users')), 2500, null)
     if (!snapshot) {
       return getStoredUsers()
     }
@@ -131,21 +118,70 @@ export async function loadUsersFromFirestore(): Promise<User[]> {
     })
 
     if (list.length > 0) {
-      const localUsers = getStoredUsers()
-      const mergedMap = new Map<string, User>()
-      DEFAULT_USERS.forEach((u) => mergedMap.set(u.email.toLowerCase(), u))
-      localUsers.forEach((u) => mergedMap.set(u.email.toLowerCase(), u))
-      list.forEach((u) => mergedMap.set(u.email.toLowerCase(), u))
-      const merged = Array.from(mergedMap.values())
-      saveStoredUsers(merged)
-      return merged
+      if (!list.some((u) => u.email.toLowerCase() === 'admin@mapan.gov')) {
+        list.unshift(DEFAULT_USERS[0])
+        syncUserToFirestore(DEFAULT_USERS[0]).catch(() => {})
+      }
+      saveStoredUsers(list)
+      return list
     }
-    return getStoredUsers()
+
+    saveStoredUsers(DEFAULT_USERS)
+    syncUserToFirestore(DEFAULT_USERS[0]).catch(() => {})
+    return DEFAULT_USERS
   } catch (err) {
     console.warn('Could not fetch users from Firestore:', err)
     return getStoredUsers()
   }
 }
+
+/**
+ * Permanently purge all non-admin users from Firestore and LocalStorage
+ */
+export async function purgeNonAdminUsers(): Promise<{ success: boolean; count: number }> {
+  try {
+    const adminUser = DEFAULT_USERS[0]
+    const snapshot = await withTimeout(getDocs(collection(db, 'users')), 3500, null)
+    let deletedCount = 0
+    if (snapshot) {
+      const deletePromises: Promise<unknown>[] = []
+      snapshot.forEach((d) => {
+        const data = d.data() as Record<string, unknown>
+        const docEmail = ((data?.email as string) || '').toLowerCase().trim()
+        if (docEmail !== 'admin@mapan.gov') {
+          deletePromises.push(deleteDoc(doc(db, 'users', d.id)))
+          deletedCount++
+        }
+      })
+      await Promise.all(deletePromises)
+    }
+
+    // Ensure only admin user exists
+    await syncUserToFirestore(adminUser)
+    saveStoredUsers([adminUser])
+
+    return { success: true, count: deletedCount }
+  } catch (err) {
+    console.error('Error purging non-admin users:', err)
+    saveStoredUsers([DEFAULT_USERS[0]])
+    return { success: false, count: 0 }
+  }
+}
+
+// Automatically trigger one-time clean-up of legacy test users
+const CLEANUP_KEY = 'mapan_cleanup_v3_purge_non_admin'
+export function triggerInitialUserCleanup() {
+  try {
+    if (!localStorage.getItem(CLEANUP_KEY)) {
+      localStorage.setItem(CLEANUP_KEY, 'done')
+      purgeNonAdminUsers().catch(() => {})
+    }
+  } catch {
+    // ignore
+  }
+}
+
+triggerInitialUserCleanup()
 
 export function saveStoredUsers(users: User[]) {
   try {
@@ -375,16 +411,15 @@ export function updateUser(
   return true
 }
 
-export function deleteUser(userId: string): boolean {
+export async function deleteUser(userId: string): Promise<boolean> {
   const users = getStoredUsers()
   const filtered = users.filter((u) => u.id !== userId)
-  if (filtered.length === users.length) return false
+  saveStoredUsers(filtered.length > 0 ? filtered : DEFAULT_USERS)
 
-  saveStoredUsers(filtered)
   try {
-    deleteDoc(doc(db, 'users', userId))
-  } catch {
-    // Offline ignore
+    await withTimeout(deleteDoc(doc(db, 'users', userId)), 3000, undefined)
+  } catch (err) {
+    console.warn('Firestore user delete error:', err)
   }
   return true
 }
