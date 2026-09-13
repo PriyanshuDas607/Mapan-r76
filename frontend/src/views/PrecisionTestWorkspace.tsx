@@ -240,6 +240,7 @@ export default function PrecisionTestWorkspace({
 
   const openReport = () => {
     if (valid.length === 0) return
+    if (onSaveReport) onSaveReport(reportData)
     setShowReportModal(true)
   }
 
@@ -248,6 +249,7 @@ export default function PrecisionTestWorkspace({
     if (onSaveReport) onSaveReport(reportData)
     setShowReportModal(true)
   }
+
 
   // If no instrument registered and manual mode not active, prompt user cleanly
   if (instruments.length === 0 && !manualMode) {

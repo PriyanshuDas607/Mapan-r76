@@ -38,20 +38,22 @@ export default function LoginView({ onLogin }: Props) {
         return
       }
 
+      setLoading(false)
       setSuccessMsg('Authenticated! Signing in...')
-      setTimeout(() => {
-        onLogin(res.user!)
-      }, 300)
+      onLogin(res.user)
     } catch {
       setError('An error occurred during authentication. Please try again.')
+      setLoading(false)
+    } finally {
       setLoading(false)
     }
   }
 
-  const handleSignUp = async (e: FormEvent) => {
+  const handleSignUp = (e: FormEvent) => {
     e.preventDefault()
     setError('')
     setSuccessMsg('')
+
     if (!name.trim() || !email.trim() || !password) {
       setError('Please fill in all required fields.')
       return
@@ -69,23 +71,22 @@ export default function LoginView({ onLogin }: Props) {
 
     setLoading(true)
     try {
-      // Normal public user creation registers strictly as an Operator
-      const res = await registerNewUser(name, email, password, jobTitle)
+      const res = registerNewUser(name, email, password, jobTitle)
       if (!res.success || !res.user) {
         setError(res.error || 'Registration failed.')
         setLoading(false)
         return
       }
 
-      setSuccessMsg('Personnel account registered successfully! Signing in...')
-      setTimeout(() => {
-        onLogin(res.user!)
-      }, 600)
+      setSuccessMsg('Account created successfully! Entering workspace...')
+      setLoading(false)
+      onLogin(res.user)
     } catch {
-      setError('Failed to create account. Please try again.')
+      setError('An error occurred during account creation. Please try again.')
       setLoading(false)
     }
   }
+
 
   return (
     <main className="login-shell">
@@ -142,6 +143,7 @@ export default function LoginView({ onLogin }: Props) {
                 setPassword('')
                 setError('')
                 setSuccessMsg('')
+                setLoading(false)
               }}
               style={{
                 flex: 1,
@@ -171,6 +173,7 @@ export default function LoginView({ onLogin }: Props) {
                 setPassword('')
                 setError('')
                 setSuccessMsg('')
+                setLoading(false)
               }}
               style={{
                 flex: 1,
@@ -337,8 +340,8 @@ export default function LoginView({ onLogin }: Props) {
               {error && <div className="login-error">! {error}</div>}
               {successMsg && <div style={{ color: '#1a7f37', fontSize: '11px', margin: '8px 0', fontWeight: 700 }}>✓ {successMsg}</div>}
 
-              <button className="login-submit" type="submit" disabled={loading} style={{ marginTop: '12px', opacity: loading ? 0.7 : 1 }}>
-                {loading ? 'Registering...' : 'Create Account & Sign In'} <ArrowRight size={16} />
+              <button className="login-submit" type="submit" style={{ marginTop: '12px' }}>
+                Create Account &amp; Sign In <ArrowRight size={16} />
               </button>
             </form>
           )}

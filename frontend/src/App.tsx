@@ -19,6 +19,12 @@ import {
   loadReportsFromFirestore,
   syncAuditLogToFirestore,
   loadAuditLogsFromFirestore,
+  subscribeToInstruments,
+  subscribeToReports,
+  subscribeToAuditLogs,
+  getLocalInstruments,
+  getLocalReports,
+  getLocalAuditLogs,
 } from './services/dbService.ts'
 import {
   Activity,
@@ -84,24 +90,70 @@ export default function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
 
-  // Real dynamic workspace records synced with Firestore
-  const [instruments, setInstruments] = useState<Instrument[]>([])
+  // Real dynamic workspace records — initialized from localStorage (instant), then synced with Firebase
+  const [instruments, setInstruments] = useState<Instrument[]>(() => {
+    const local = getLocalInstruments()
+    return local.length > 0 ? local : []
+  })
   const [selectedInstrument, setSelectedInstrument] = useState<Instrument | null>(null)
-  const [reports, setReports] = useState<ReportData[]>([])
+  const [reports, setReports] = useState<ReportData[]>(() => {
+    const local = getLocalReports()
+    return local.length > 0 ? local : []
+  })
   const [selectedReport, setSelectedReport] = useState<ReportData | null>(null)
-  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([])
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>(() => {
+    const local = getLocalAuditLogs()
+    return local.length > 0 ? local : []
+  })
 
-  // Load cloud data from Firestore on mount
+  // Live Realtime Database Synchronization — merges cloud with local on every update
   useEffect(() => {
+    // Initial cloud fetch (merges with localStorage inside the functions)
     loadInstrumentsFromFirestore().then((list) => {
-      setInstruments(list)
+      if (list && list.length > 0) setInstruments(list)
     })
     loadReportsFromFirestore().then((list) => {
-      setReports(list)
+      if (list && list.length > 0) setReports(list)
     })
     loadAuditLogsFromFirestore().then((list) => {
-      setAuditEvents(list)
+      if (list && list.length > 0) setAuditEvents(list)
     })
+
+    // Active live listeners for instant real-time data sync across all devices
+    // These callbacks receive merged (cloud + local) data from dbService
+    const unsubInst = subscribeToInstruments((list) => {
+      if (list && list.length > 0) setInstruments(list)
+    })
+    const unsubRep = subscribeToReports((list) => {
+      if (list && list.length > 0) setReports(list)
+    })
+    const unsubAudit = subscribeToAuditLogs((list) => {
+      if (list && list.length > 0) setAuditEvents(list)
+    })
+
+    return () => {
+      unsubInst()
+      unsubRep()
+      unsubAudit()
+    }
+  }, [])
+
+  // Listen for session changes across tabs or custom dispatch
+  useEffect(() => {
+    const handleSessionEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<User | null>
+      if (customEvent.detail !== undefined) {
+        setCurrentUser(customEvent.detail)
+      } else {
+        setCurrentUser(getCurrentSession())
+      }
+    }
+    window.addEventListener('mapan_session_change', handleSessionEvent)
+    window.addEventListener('storage', handleSessionEvent)
+    return () => {
+      window.removeEventListener('mapan_session_change', handleSessionEvent)
+      window.removeEventListener('storage', handleSessionEvent)
+    }
   }, [])
 
   const isAdmin = currentUser?.role === 'ADMIN'
@@ -147,46 +199,52 @@ export default function App() {
 
   // Add audit event helper
   const addAuditEvent = async (action: string, target: string, actorName?: string) => {
-    const actor = actorName || currentUser?.name || 'System'
-    const userId = currentUser?.id
-    const userEmail = currentUser?.email
-    const now = new Date()
-    const timestamp =
-      now.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }) +
-      ', ' +
-      now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    try {
+      const actor = actorName || currentUser?.name || 'System'
+      const userId = currentUser?.id
+      const userEmail = currentUser?.email
+      const now = new Date()
+      const timestamp =
+        now.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }) +
+        ', ' +
+        now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-    const hash = await generateSHA256Hash({
-      action,
-      target,
-      actor,
-      userId,
-      timestamp,
-      random: Math.random(),
-    })
+      const hash = await generateSHA256Hash({
+        action,
+        target,
+        actor,
+        userId,
+        userEmail,
+        timestamp,
+        random: Math.random(),
+      })
 
-    const event: AuditEvent = {
-      id: `EVT-${Date.now()}`,
-      timestamp,
-      actor,
-      userId,
-      userEmail,
-      action,
-      target,
-      hash: hash.slice(0, 16) + '...',
+      const event: AuditEvent = {
+        id: `EVT-${Date.now()}`,
+        timestamp,
+        actor,
+        userId,
+        userEmail,
+        action,
+        target,
+        hash: hash.slice(0, 16) + '...',
+      }
+      setAuditEvents((prev) => [event, ...prev])
+      syncAuditLogToFirestore(event).catch(() => {})
+    } catch (err) {
+      console.warn('Audit event creation warning:', err)
     }
-    setAuditEvents((prev) => [event, ...prev])
-    syncAuditLogToFirestore(event)
   }
 
   const handleLogin = (user: User) => {
     setCurrentUser(user)
     setCurrentSession(user)
-    addAuditEvent('USER_LOGIN', `Personnel signed in: ${user.name} (${user.role})`, user.name)
+    setPage('Overview')
+    addAuditEvent('USER_LOGIN', `Personnel signed in: ${user.name} (${user.role})`, user.name).catch(() => {})
   }
 
   const handleLogout = () => {
@@ -248,6 +306,29 @@ export default function App() {
     }
     setReports((prev) => [reportWithUser, ...prev.filter((r) => r.reportNumber !== reportWithUser.reportNumber)])
     syncReportToFirestore(reportWithUser)
+
+    // Also auto-register instrument if it wasn't already in the list
+    if (newReport.instrument && newReport.instrument.serial) {
+      const exists = instruments.some((i) => i.serial === newReport.instrument.serial)
+      if (!exists) {
+        const instToSave: Instrument = {
+          serial: newReport.instrument.serial,
+          model: newReport.instrument.model || 'Precision Laboratory Scale',
+          manufacturer: newReport.instrument.manufacturer || 'Standards Metrology',
+          accuracy: newReport.instrument.accuracy || 'I',
+          status: 'Active',
+          max: newReport.instrument.max || '30.00',
+          interval: newReport.instrument.interval || '0.010',
+          location: newReport.instrument.location || 'Central Standards Lab',
+          createdBy: currentUser?.id,
+          createdByName: currentUser?.name,
+          userEmail: currentUser?.email,
+        }
+        setInstruments((prev) => [instToSave, ...prev])
+        syncInstrumentToFirestore(instToSave)
+      }
+    }
+
     addAuditEvent(
       'SEAL_CERTIFICATE',
       `Sealed official certificate #${reportWithUser.reportNumber} for ${reportWithUser.instrument.serial}`
@@ -259,6 +340,7 @@ export default function App() {
     deleteReportFromFirestore(reportNumber)
     addAuditEvent('ARCHIVE_REPORT', `Archived/Revoked certificate #${reportNumber}`)
   }
+
 
   if (!currentUser) return <LoginView onLogin={handleLogin} />
 

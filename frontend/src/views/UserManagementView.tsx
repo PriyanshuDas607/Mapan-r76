@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   UserPlus,
   Search,
@@ -9,14 +9,18 @@ import {
   RotateCcw,
   Eye,
   EyeOff,
+  RefreshCw,
 } from 'lucide-react'
 import {
   getStoredUsers,
+  saveStoredUsers,
   loadUsersFromFirestore,
+  subscribeToUsers,
   adminCreateUser,
   updateUser,
   deleteUser,
   purgeNonAdminUsers,
+  DEFAULT_ADMIN_USER,
 } from '../services/authStore.ts'
 import type { User, UserRole } from '../services/authStore.ts'
 import '../styles/views.css'
@@ -30,7 +34,8 @@ export default function UserManagementView({
   currentUserId,
   onAddAuditEvent,
 }: Props) {
-  const [users, setUsers] = useState<User[]>(getStoredUsers())
+  // Initialize instantly from local cache — NO Firestore wait on mount
+  const [users, setUsers] = useState<User[]>(() => getStoredUsers())
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('ALL')
   const [openAddModal, setOpenAddModal] = useState(false)
@@ -39,13 +44,7 @@ export default function UserManagementView({
   const [showAddPassword, setShowAddPassword] = useState(false)
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({})
   const [purging, setPurging] = useState(false)
-
-  // Load from Firestore on mount
-  useEffect(() => {
-    loadUsersFromFirestore().then((cloudUsers) => {
-      if (cloudUsers.length > 0) setUsers(cloudUsers)
-    })
-  }, [])
+  const [syncing, setSyncing] = useState(false)
 
   // Add User Form State
   const [formName, setFormName] = useState('')
@@ -56,11 +55,35 @@ export default function UserManagementView({
   const [formPhone, setFormPhone] = useState('')
   const [error, setError] = useState('')
 
-  const refreshUsers = () => {
+  // Live Realtime Database sync on mount + active listener
+  useEffect(() => {
+    let cancelled = false
     loadUsersFromFirestore().then((cloudUsers) => {
-      setUsers(cloudUsers)
+      if (!cancelled && cloudUsers.length > 0) {
+        setUsers(cloudUsers)
+      }
     })
-  }
+
+    const unsubscribe = subscribeToUsers((liveUsers) => {
+      if (!cancelled && liveUsers.length > 0) {
+        setUsers(liveUsers)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [])
+
+  // Manual cloud refresh button
+  const handleManualRefresh = useCallback(() => {
+    setSyncing(true)
+    loadUsersFromFirestore().then((cloudUsers) => {
+      if (cloudUsers.length > 0) setUsers(cloudUsers)
+      setSyncing(false)
+    })
+  }, [])
 
   const togglePasswordVisibility = (userId: string) => {
     setVisiblePasswords((prev) => ({
@@ -70,44 +93,65 @@ export default function UserManagementView({
   }
 
   const handlePurgeAll = async () => {
-    if (confirm('Are you sure you want to permanently delete ALL non-admin accounts from Firebase and local database? Only Dr. Vikram Mehta (Admin) will be preserved.')) {
-      setPurging(true)
+    if (!confirm('Are you sure you want to permanently delete ALL non-admin accounts from Firebase Realtime Database and local directory? Only Dr. Vikram Mehta (Admin) will be preserved.')) return
+    
+    setPurging(true)
+    
+    // Instant local update
+    saveStoredUsers([DEFAULT_ADMIN_USER])
+    setUsers([DEFAULT_ADMIN_USER])
+    
+    // Background purge across Realtime Database & Firestore
+    try {
       const res = await purgeNonAdminUsers()
-      onAddAuditEvent('ADMIN_PURGE_USERS', `Admin purged ${res.count} personnel accounts from Firebase registry`)
-      refreshUsers()
-      setPurging(false)
+      onAddAuditEvent('ADMIN_PURGE_USERS', `Admin purged ${res.count} personnel accounts from Firebase Realtime Database registry`)
+    } catch (err) {
+      console.warn('Purge error:', err)
     }
+    
+    setPurging(false)
   }
 
-  const handleAddUser = async () => {
+  const handleAddUser = () => {
     if (!formName.trim() || !formEmail.trim() || !formPassword) {
       setError('Name, email, and password are required.')
       return
     }
 
-    const res = await adminCreateUser(formName, formEmail, formPassword, formRole, formDept)
+    const res = adminCreateUser(formName, formEmail, formPassword, formRole, formDept)
     if (!res.success || !res.user) {
       setError(res.error || 'Failed to create user.')
       return
     }
 
-    if (formDept || formPhone) {
-      updateUser(res.user.id, { department: formDept, phone: formPhone })
+    // Apply extra fields
+    if (formPhone) {
+      updateUser(res.user.id, { phone: formPhone })
     }
+
+    const finalUser = { ...res.user, phone: formPhone || '' }
+
+    // INSTANT optimistic local update — no Firestore wait
+    setUsers((prev) => {
+      const existing = prev.find(u => u.email.toLowerCase() === finalUser.email.toLowerCase())
+      if (existing) return prev
+      return [finalUser, ...prev]
+    })
 
     onAddAuditEvent(
       'ADMIN_CREATE_USER',
       `Admin created user ${res.user.name} (${res.user.email}) as ${res.user.role}`
     )
 
+    // Reset form
     setFormName('')
     setFormEmail('')
     setFormPassword('')
     setFormRole('OPERATOR')
+    setFormDept('Precision Metrology Bay')
     setFormPhone('')
     setError('')
     setOpenAddModal(false)
-    refreshUsers()
   }
 
   const handleToggleActive = (user: User) => {
@@ -117,16 +161,24 @@ export default function UserManagementView({
     }
 
     const nextStatus = !user.active
+
+    // Instant optimistic update
+    setUsers((prev) => prev.map(u => u.id === user.id ? { ...u, active: nextStatus } : u))
+
+    // Background sync
     updateUser(user.id, { active: nextStatus })
     onAddAuditEvent(
       nextStatus ? 'ACTIVATE_USER' : 'DEACTIVATE_USER',
       `${nextStatus ? 'Activated' : 'Deactivated'} user ${user.name} (${user.email})`
     )
-    refreshUsers()
   }
 
   const handleSaveEdit = () => {
     if (!editingUser) return
+
+    // Instant optimistic update
+    setUsers((prev) => prev.map(u => u.id === editingUser.id ? editingUser : u))
+
     updateUser(editingUser.id, {
       name: editingUser.name,
       email: editingUser.email,
@@ -141,7 +193,6 @@ export default function UserManagementView({
       `Updated user profile & credentials for ${editingUser.name} (${editingUser.email})`
     )
     setEditingUser(null)
-    refreshUsers()
   }
 
   const handleDelete = async (user: User) => {
@@ -150,11 +201,14 @@ export default function UserManagementView({
       return
     }
 
-    if (confirm(`Are you sure you want to permanently delete user ${user.name} (${user.email}) from Firebase and system registry?`)) {
-      await deleteUser(user.id)
-      onAddAuditEvent('ADMIN_DELETE_USER', `Deleted user account ${user.name} (${user.email})`)
-      refreshUsers()
-    }
+    if (!confirm(`Are you sure you want to permanently delete user ${user.name} (${user.email})?`)) return
+
+    // Instant optimistic removal
+    setUsers((prev) => prev.filter(u => u.id !== user.id))
+
+    // Background Firestore delete
+    deleteUser(user.id)
+    onAddAuditEvent('ADMIN_DELETE_USER', `Deleted user account ${user.name} (${user.email})`)
   }
 
   const filtered = users.filter((u) => {
@@ -171,12 +225,21 @@ export default function UserManagementView({
       <div className="workflow-heading">
         <div>
           <p className="eyebrow">ADMINISTRATION · ACCESS CONTROL</p>
-          <h1>User & Role Management</h1>
+          <h1>User &amp; Role Management</h1>
           <p className="subheading">
             Manage authorized laboratory personnel, assign role permissions (Admin vs Metrologist), and review access status.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className="button secondary"
+            onClick={handleManualRefresh}
+            disabled={syncing}
+            title="Sync latest data from Firebase cloud"
+          >
+            <RefreshCw size={14} style={{ marginRight: '5px', ...(syncing ? { animation: 'spin 1s linear infinite' } : {}) }} />
+            {syncing ? 'Syncing...' : 'Sync Cloud'}
+          </button>
           <button
             className="button secondary"
             onClick={handlePurgeAll}
@@ -185,7 +248,7 @@ export default function UserManagementView({
             style={{ color: '#cf222e' }}
           >
             <RotateCcw size={14} style={{ marginRight: '5px' }} />
-            {purging ? 'Purging...' : 'Purge All Non-Admin Users'}
+            {purging ? 'Purging...' : 'Purge Non-Admin'}
           </button>
           <button className="button primary" onClick={() => setOpenAddModal(true)}>
             <UserPlus size={14} style={{ marginRight: '5px' }} />
@@ -238,7 +301,7 @@ export default function UserManagementView({
             <thead>
               <tr>
                 <th>Personnel</th>
-                <th>Role & Permissions</th>
+                <th>Role &amp; Permissions</th>
                 <th>Assigned Credentials</th>
                 <th>Department</th>
                 <th>Status</th>
