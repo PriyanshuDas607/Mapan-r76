@@ -496,10 +496,10 @@
 }
 
 .cert-qr-img {
-  width: 50px;
-  height: 50px;
+  width: 70px;
+  height: 70px;
   border-radius: 4px;
-  border: 1px solid #d2e4df;
+  border: 1px solid #c0d8d0;
   background: #ffffff;
   flex-shrink: 0;
   display: block;

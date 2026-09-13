@@ -67,25 +67,17 @@ export default function CalibrationReport({ data, onClose, onPrint }: Props) {
     }
   })
 
-  // Generate real scannable QR Code containing genuine verification record
+  // Generate real scannable QR Code pointing to tamper-proof public verification link
   useEffect(() => {
-    const verificationPayload = [
-      `LEGAL METROLOGY VERIFICATION CERTIFICATE`,
-      `Cert ID: ${data.reportNumber}`,
-      `Status: ${isPass ? 'VERIFIED PASSED' : 'RE-VERIFICATION REQUIRED'}`,
-      `Instrument: ${data.instrument.model} (S/N: ${data.instrument.serial})`,
-      `Class: ${data.instrument.accuracy} | Max: ${data.instrument.max}kg | e: ${data.instrument.interval}kg`,
-      `Standard: OIML R 76-1:2006`,
-      `Date/Time: ${data.issueDate} ${data.issueTime}`,
-      `Metrologist: ${data.technicianName}`,
-      `SHA-256: ${data.sha256Hash}`,
-      `Verification URL: https://mapan.gov.in/verify/${data.reportNumber}`
-    ].join('\n')
+    const origin = typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost')
+      ? window.location.origin
+      : 'https://mapan-r76.vercel.app'
+    const verificationUrl = `${origin}/?verify=${encodeURIComponent(data.reportNumber)}`
 
-    generateQRCodeDataURL(verificationPayload).then((url) => {
+    generateQRCodeDataURL(verificationUrl).then((url) => {
       setQrCodeUrl(url)
     })
-  }, [data, isPass])
+  }, [data])
 
   const handlePrint = () => {
     if (onPrint) {

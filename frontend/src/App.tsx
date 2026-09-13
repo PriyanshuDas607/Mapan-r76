@@ -6,6 +6,7 @@ import CalibrationReport from './views/CalibrationReport.tsx'
 import type { ReportData } from './views/CalibrationReport.tsx'
 import LoginView from './views/LoginView.tsx'
 import UserManagementView from './views/UserManagementView.tsx'
+import PublicVerificationView from './views/PublicVerificationView.tsx'
 import { AccountSettings, SettingsView } from './views/SettingsView.tsx'
 import { getCurrentSession, setCurrentSession } from './services/authStore.ts'
 import type { User } from './services/authStore.ts'
@@ -80,6 +81,25 @@ export default function App() {
     if (saved === 'dark' || saved === 'light') return saved
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   })
+
+  const [verifyId, setVerifyId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      return params.get('verify')
+    }
+    return null
+  })
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search)
+        setVerifyId(params.get('verify'))
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -353,6 +373,22 @@ export default function App() {
     addAuditEvent('ARCHIVE_REPORT', `Archived/Revoked certificate #${reportNumber}`)
   }
 
+
+  if (verifyId) {
+    return (
+      <PublicVerificationView
+        verifyId={verifyId}
+        onExit={() => {
+          setVerifyId(null)
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href)
+            url.searchParams.delete('verify')
+            window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''))
+          }
+        }}
+      />
+    )
+  }
 
   if (!currentUser) return <LoginView onLogin={handleLogin} />
 

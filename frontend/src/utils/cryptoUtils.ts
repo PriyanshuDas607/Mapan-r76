@@ -30,10 +30,10 @@ export async function generateSHA256Hash(payload: Record<string, unknown>): Prom
 export async function generateQRCodeDataURL(text: string): Promise<string> {
   try {
     return await QRCode.toDataURL(text, {
-      width: 120,
+      width: 300,
       margin: 1,
       color: {
-        dark: '#183e4e',
+        dark: '#000000',
         light: '#ffffff',
       },
       errorCorrectionLevel: 'M',
