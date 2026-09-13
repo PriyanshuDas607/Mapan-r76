@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
-import { FileText, Printer, Sliders, CheckCircle2, AlertTriangle, ShieldCheck, Scale, Building2, MapPin, Plus, Trash2 } from 'lucide-react'
+import { Sliders, CheckCircle2, AlertTriangle, ShieldCheck, Scale, Building2, MapPin, Plus, Trash2 } from 'lucide-react'
+
 import CalibrationReport from './CalibrationReport.tsx'
 import type { ReportData, InstrumentInfo, ObservationRow } from './CalibrationReport.tsx'
 import type { Instrument } from './InstrumentRegisterView.tsx'
@@ -238,17 +239,12 @@ export default function PrecisionTestWorkspace({
     }
   }, [rows, computed, interval, accuracyClass, maxCapacity, instrumentForm, temperature, humidity, pressure, standardWeightsRef, userName, overallResult, sha256Hash])
 
-  const openReport = () => {
-    if (valid.length === 0) return
-    if (onSaveReport) onSaveReport(reportData)
-    setShowReportModal(true)
-  }
-
   const handleSaveAndOpen = () => {
     if (valid.length === 0) return
     if (onSaveReport) onSaveReport(reportData)
     setShowReportModal(true)
   }
+
 
 
   // If no instrument registered and manual mode not active, prompt user cleanly
@@ -329,23 +325,15 @@ export default function PrecisionTestWorkspace({
             Autosaved
           </span>
           <button
-            className="button secondary"
-            onClick={openReport}
-            disabled={valid.length === 0}
-            title={valid.length === 0 ? 'Enter at least 1 reading to generate report' : 'Generate structured certificate'}
-          >
-            <FileText size={14} style={{ marginRight: '5px' }} />
-            ⇧ Generate PDF report
-          </button>
-          <button
             className="button primary"
             onClick={handleSaveAndOpen}
             disabled={valid.length === 0}
           >
-            Submit for review & Seal
+            Submit for review &amp; Seal
           </button>
         </div>
       </div>
+
 
       {/* Instrument Selection & Metadata Header Bar */}
       <div style={{ margin: '0 4.3% 14px' }}>
@@ -744,19 +732,12 @@ export default function PrecisionTestWorkspace({
                   )
                 })}
               </div>
-              <div style={{ display: 'flex', gap: '10px', margin: '0 20px 20px' }}>
+              <div style={{ margin: '0 20px 20px' }}>
                 <button className="small-button" onClick={addRow}>
                   ＋ Add reading
                 </button>
-                <button
-                  className="small-button"
-                  onClick={openReport}
-                  disabled={valid.length === 0}
-                  style={{ background: '#e9f4f1' }}
-                >
-                  <Printer size={13} style={{ marginRight: '4px' }} /> Preview & Print Certificate
-                </button>
               </div>
+
             </>
           )}
 
