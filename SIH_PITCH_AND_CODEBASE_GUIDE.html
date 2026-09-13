@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mapan (मापन) — SIH 2026 Tech Expert Pitch Guide (Hinglish Edition)</title>
+  <style>
+    :root {
+      --navy: #0f2730;
+      --teal: #0f7c76;
+      --teal-light: #eaf5f1;
+      --teal-dark: #0a524e;
+      --dark: #17252b;
+      --text: #2c3e44;
+      --muted: #647e7d;
+      --border: #d8e5e0;
+      --card-bg: #ffffff;
+      --bg: #f5f9f7;
+      --accent: #d97706;
+      --danger: #cf222e;
+      --success: #1a7f37;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.65;
+      padding: 25px;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 40px 50px;
+      border-radius: 12px;
+      box-shadow: 0 4px 25px rgba(15, 39, 48, 0.08);
+      border: 1px solid var(--border);
+    }
+    .header {
+      border-bottom: 3px solid var(--teal);
+      padding-bottom: 22px;
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      background: var(--teal-light);
+      color: var(--teal-dark);
+      border: 1px solid #b8ded5;
+    }
+    .badge-orange { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+    h1 { font-size: 30px; color: var(--navy); margin-bottom: 6px; font-weight: 800; letter-spacing: -0.5px; }
+    h2 { font-size: 21px; color: var(--navy); margin: 30px 0 14px; border-bottom: 1.5px solid var(--border); padding-bottom: 8px; font-weight: 700; }
+    h3 { font-size: 16px; color: var(--teal-dark); margin: 18px 0 8px; font-weight: 700; }
+    p, li { font-size: 14px; color: var(--text); margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin-bottom: 14px; }
+    li { margin-bottom: 6px; }
+    .print-btn {
+      background: var(--teal);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .print-btn:hover { background: var(--teal-dark); }
+    .card {
+      background: var(--teal-light);
+      border: 1px solid #c2e2d8;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+    .card-dark {
+      background: #17252b;
+      color: #e6edf0;
+      border: 1px solid #2d454e;
+    }
+    .card-dark p, .card-dark li { color: #d0e0e3; }
+    .card-dark h3, .card-dark h4 { color: #4ee0d6; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    th {
+      background: #eef5f2;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    tr:nth-child(even) td { background: #fafcfb; }
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 12.5px;
+      background: #edf3f0;
+      color: var(--teal-dark);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #d4e3dc;
+    }
+    pre {
+      background: #152228;
+      color: #e2eff1;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-x: auto;
+      margin: 14px 0;
+      border: 1px solid #283e47;
+    }
+    .qa-box {
+      background: #ffffff;
+      border: 1.5px solid #d4e5de;
+      border-left: 5px solid var(--teal);
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin: 14px 0;
+    }
+    .qa-q {
+      font-weight: 800;
+      color: var(--navy);
+      font-size: 14.5px;
+      margin-bottom: 8px;
+    }
+    .qa-a {
+      font-size: 13.5px;
+      color: #384e55;
+    }
+    .script-box {
+      background: #fdfbf7;
+      border: 1.5px solid #fae2b8;
+      border-left: 5px solid var(--d97706, #d97706);
+      border-radius: 6px;
+      padding: 18px 22px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: #451a03;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .highlight-text {
+      color: var(--teal-dark);
+      font-weight: 700;
+    }
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .container { padding: 25px 20px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .header { flex-direction: column; }
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .container { border: none; box-shadow: none; padding: 0; width: 100%; max-width: 100%; }
+      .print-btn { display: none; }
+      .page-break { page-break-before: always; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <span class="badge badge-orange">SIH 2026 Problem Statement #26035</span>
+        <span class="badge">OIML R 76-1:2006 (E) Standard</span>
+        <h1>⚖️ Mapan (मापन) — Legal Metrology OS</h1>
+        <p style="color: var(--muted); font-weight: 600;">Complete Tech Expert Pitch Guide &amp; Codebase Explanation (Hinglish Edition)</p>
+        <p style="font-size: 12px; color: #8a9c9b;">Team: <strong>CodeSmiths</strong> · Role: <strong>Lead Technical Architect</strong> · SIH Grand Finale 2026</p>
+      </div>
+      <button class="print-btn" onclick="window.print()">
+        🖨️ Print / Save as PDF
+      </button>
+    </div>
+
+    <!-- Section 1 -->
+    <h2>1. 🎯 60-Second Elevator Pitch (Presentation me Word-by-Word Kya Bolna Hai)</h2>
+    <div class="script-box">
+      <strong>🎤 Aapki Opening Speech (Isse confidently bolna hai):</strong><br><br>
+      "Good morning respected jury members! Main Team <strong>CodeSmiths</strong> ki taraf se <strong>Mapan</strong> present kar raha hoon — jo India ka pehla end-to-end Legal Metrology Operating System hai Non-Automatic Weighing Instruments (NAWI scales) ke liye. Yeh system international standard <strong>OIML Recommendation R 76-1:2006</strong> aur <strong>ISO/IEC 17025</strong> ke strict mathematical rules par bana hai.<br><br>
+      Aaj India ke mandis, ports aur testing laboratories me 85% verification ka kaam purane paper forms ya uncalibrated Excel sheets par hota hai. Is wajah se step-function Maximum Permissible Error (MPE) calculate karne me human errors hote hain, nakli paper certificates bante hain aur hazaron karod ka economic loss hota hai.<br><br>
+      Mapan is problem ko <strong>3 Core Technologies</strong> ke sath solve karta hai:<br>
+      1. <strong>Deterministic OIML Math Engine</strong>: Jo har weighing scale ke verification interval (e), verification index (n = Max/e), step-function MPE curves (&plusmn;0.5e, &plusmn;1.0e, &plusmn;1.5e), aur live atmospheric air density (&rho;<sub>a</sub>) ko automatically evaluate karta hai.<br>
+      2. <strong>Tamper-Proof Cryptographic Sealing</strong>: Har certificate ko SHA-256 digital seal aur ECDSA P-256 signatures se lock kiya jata hai, sath me Dynamic QR code milta hai jisse field officers bina login kiye mobile camera se instant verify kar sakein.<br>
+      3. <strong>High-Resilience Dual-Cloud Architecture</strong>: Firebase Realtime Database with direct HTTP REST fallback aur offline-first architecture, jo bina internet ke bhi mandis me chalta hai aur real-time me har device par sync hota hai."
+    </div>
+
+    <!-- Section 2 -->
+    <h2>2. 🚨 Ground Reality &amp; Real Problem (Kyun Zaroorat Padi Mapan Ki?)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 45%;">❌ Ground Reality / Manual System Ki Kami</th>
+          <th style="width: 55%;">✅ Mapan Ne Kaise Solve Kiya?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Manual Math Errors</strong>: Testing officers non-linear MPE curves (Class I se IIII tak) manually calculate karte hain jisme bahut galtiyan hoti hain.</td>
+          <td><strong>Automated OIML Engine</strong>: Sub-milligram level precision ke sath Table 3 &amp; Table 6 ke rules automatically calculate karta hai.</td>
+        </tr>
+        <tr>
+          <td><strong>Nakli / Altered Paper Certificates</strong>: Paper certificates par stamps copy kar liye jaate hain ya weights badal diye jaate hain.</td>
+          <td><strong>SHA-256 Digital Seal + Dynamic QR</strong>: Har report cryptographically locked hai. Agar koi 1 digit bhi badlega toh QR verification fail ho jayegi.</td>
+        </tr>
+        <tr>
+          <td><strong>Environmental Drift Ignored</strong>: Gold aur lab scales (Class I/II) me temperature aur pressure se hawa ka buoyancy effect scale ko distort karta hai.</td>
+          <td><strong>Live Geo-Sensory Air Density</strong>: Live GPS aur Open-Meteo API se temperature, humidity aur air pressure lekar CIPM equation se live air density (&rho;<sub>a</sub>) nikalta hai.</td>
+        </tr>
+        <tr>
+          <td><strong>Data Loss &amp; Offline Issues</strong>: Rural mandis me internet na hone par data gayab ho jata hai.</td>
+          <td><strong>Dual-Layer Offline-First Sync</strong>: LocalStorage me instant save hota hai aur internet aate hi Firebase cloud me sync ho jata hai.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Section 3 -->
+    <div class="page-break"></div>
+    <h2>3. 🏗️ High-Level System Architecture (Codebase Ka Poora Flow)</h2>
+    
+    <div class="card card-dark">
+      <h3 style="margin-top:0;">1. Frontend Layer (React 18 + TypeScript + Vite)</h3>
+      <p>• <code>oimlEngine.ts</code>: Zero-dependency pure mathematical engine hai jo har keystroke par reading ka MPE tolerance, error ($E = I - L$), aur Pass/Review status calculate karta hai.<br>
+      • <code>environmentalService.ts</code>: W3C Geolocation aur Open-Meteo API se live weather data leke CIPM formula se air density evaluate karta hai.<br>
+      • <code>cryptoUtils.ts</code>: Native WebCrypto API (<code>crypto.subtle</code>) use karke canonical JSON payload ka SHA-256 hash aur QR code generate karta hai.<br>
+      • <code>dbService.ts / authStore.ts</code>: LocalStorage caching + direct Firebase Realtime DB REST API call + background 3-second auto-poll provide karta hai.</p>
+    </div>
+
+    <div class="card card-dark">
+      <h3 style="margin-top:0;">2. Backend Microservices Layer (Node.js + Express + Prisma)</h3>
+      <p>• <code>signatureService.ts</code>: Startup par NIST curve standard ka <strong>ECDSA P-256 Key Pair</strong> banata hai aur certificate ko digitally sign karta hai (OIML Clause 5.5.2.2).<br>
+      • <code>/api/v1/verify/:reportId</code>: Public verification endpoint hai jahan mobile QR scan request aati hai aur certificate ki authenticity check hoti hai.<br>
+      • <code>Prisma ORM &amp; Helmet</code>: Rate-limiting (100 req/min), CORS security, aur relational database me permanent audit logs maintain karta hai.</p>
+    </div>
+
+    <!-- Section 4 -->
+    <h2>4. 🧮 Metrological Mathematics (OIML R 76-1:2006 Formulas Simplified)</h2>
+    <p>Agar judges mathematical formulas par question poochein, toh yeh exact points bolne hain:</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>1. Scale Interval (e) &amp; Index (n)</h3>
+        <p>• <strong>e (Scale Interval)</strong>: Scale ka official legal measurement unit (e.g. 10g scale ke liye <code>e = 0.01 kg</code>).<br>
+        • <strong>n (Verification Index)</strong>:<br>
+        <code>n = Max / e</code> ya load L ke liye: <code>n = L / e</code><br>
+        Yeh scale ki legal precision class decide karta hai.</p>
+      </div>
+      <div class="card">
+        <h3>2. Intrinsic &amp; Corrected Error</h3>
+        <p>• <strong>Intrinsic Error (E)</strong>: <code>E = Indication (I) - Load (L)</code><br>
+        • <strong>Corrected Error (E<sub>c</sub>)</strong>: <code>E<sub>c</sub> = E - E<sub>0</sub></code> (Zero-load error hata kar)<br>
+        • <strong>Pass Rule</strong>: Agar <code>|E<sub>c</sub>| &le; |MPE|</code> hai toh <strong>Pass</strong>, warna <strong>Review</strong>.</p>
+      </div>
+    </div>
+
+    <h3>Step-Function MPE Tolerances (OIML Clause 3.5.1, Table 6):</h3>
+    <p style="font-size: 13px; color: var(--muted);">Notice karein: Error tolerance percentage me nahi, balki <strong>step-function tiers</strong> me hoti hai:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>MPE Tier</th>
+          <th>Class I (Special)</th>
+          <th>Class II (High)</th>
+          <th>Class III (Medium)</th>
+          <th>Class IIII (Ordinary)</th>
+          <th>Initial Verification MPE</th>
+          <th>In-Service MPE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Tier 1</strong></td>
+          <td>0 &le; n &le; 50,000</td>
+          <td>0 &le; n &le; 5,000</td>
+          <td>0 &le; n &le; 500</td>
+          <td>0 &le; n &le; 50</td>
+          <td><strong>&plusmn;0.5 e</strong></td>
+          <td>&plusmn;1.0 e</td>
+        </tr>
+        <tr>
+          <td><strong>Tier 2</strong></td>
+          <td>50,000 &lt; n &le; 200,000</td>
+          <td>5,000 &lt; n &le; 20,000</td>
+          <td>500 &lt; n &le; 2,000</td>
+          <td>50 &lt; n &le; 200</td>
+          <td><strong>&plusmn;1.0 e</strong></td>
+          <td>&plusmn;2.0 e</td>
+        </tr>
+        <tr>
+          <td><strong>Tier 3</strong></td>
+          <td>n &gt; 200,000</td>
+          <td>20,000 &lt; n &le; 100,000</td>
+          <td>2,000 &lt; n &le; 10,000</td>
+          <td>200 &lt; n &le; 1,000</td>
+          <td><strong>&plusmn;1.5 e</strong></td>
+          <td>&plusmn;3.0 e</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card">
+      <h3>CIPM Air Density Formula (Class I &amp; II Scales Ke Buoyancy Effect Ke Liye):</h3>
+      <p>Precision balances me hawa ka buoyancy effect reading ko shift karta hai. Mapan live air density (&rho;<sub>a</sub>) is formula se calculate karta hai:</p>
+      <pre>&rho;<sub>a</sub> = (0.34848 &times; P[hPa] - 0.009 &times; RH[%] &times; e<sup>0.061 &times; T[&deg;C]</sup>) / (273.15 + T[&deg;C])</pre>
+      <p style="font-size: 12px; margin-bottom: 0;">Standard STP density 1.200 kg/m&sup3; hoti hai. Agar live weather me temperature 35&deg;C aur pressure 990 hPa ho jata hai, toh density gir kar 1.11 kg/m&sup3; ho jaati hai jisse scale me false deviation aati hai.</p>
+    </div>
+
+    <!-- Section 5 -->
+    <div class="page-break"></div>
+    <h2>5. ☁️ Firebase Realtime Database Clean Tree Structure</h2>
+    <p>Judges ko dikhane ke liye hamari database ka clean structure:</p>
+    <pre>
+mapan-1013c-default-rtdb
+│
+├── 📁 users                           &lt;-- Saare Laboratory Officers &amp; Admins
+│   ├── 🔑 USR-ADMIN-01                &lt;-- Dr. Vikram Mehta (Chief Standards Officer - Admin)
+│   └── 🔑 USR-1789316096489           &lt;-- Rohit Sharma (Testing Metrologist)
+│
+├── 📁 instruments                     &lt;-- Saare Registered NAWI Scales (Serial Number wise)
+│   ├── 🔑 MTP-2026-088                &lt;-- Mettler Toledo XPR205 (Class I, Max: 0.22kg, e: 0.0001kg)
+│   └── 🔑 KRN-2026-104                &lt;-- KERN ABT 220-4M (Class II, Max: 6.2kg, e: 0.01kg)
+│
+├── 📁 instrument_readings             &lt;-- Instrument wise Observation Tables
+│   └── 🔑 MTP-2026-088
+│       └── 📄 REP-2026-001            &lt;-- Test Readings (Load, Indication, Error, MPE, Result)
+│
+├── 📁 reports                         &lt;-- Sealed Official Certificates (With SHA-256 Hashes)
+│   └── 📄 MPN-CERT-202609-13-3092
+│
+└── 📁 audit_logs                      &lt;-- Cryptographically Chained Compliance Event Logs
+    └── 🛡️ EVT-GENESIS-01
+    </pre>
+
+    <!-- Section 6 -->
+    <h2>6. 🛡️ Cryptographic Integrity &amp; Anti-Fraud (Kaise Kaam Karta Hai?)</h2>
+    <div class="card">
+      <p>1. <strong>Canonical JSON Sorting</strong>: Test session seal hote hi saare inputs (Scale Serial, Readings, Weather, Officer ID, Timestamp) ko alphabetically sort karke standardized JSON banaya jata hai.<br>
+      2. <strong>SHA-256 Hash Generation</strong>: Browser ka native WebCrypto engine (<code>window.crypto.subtle</code>) unforgeable 256-bit hash compute karta hai.<br>
+      3. <strong>Dynamic QR Code</strong>: Certificate ke footer me QR code generate hota hai jisme verification URL aur SHA-256 hash embed hota hai.<br>
+      4. <strong>Tamper Detection</strong>: Agar koi PDF download karke Photoshop ya editor me weight ya error badal deta hai, toh SHA-256 hash mismatch ho jata hai aur system use turant <strong>FAKE / COUNTERFEIT</strong> declare kar deta hai.</p>
+    </div>
+
+    <!-- Section 7 -->
+    <div class="page-break"></div>
+    <h2>7. ❓ Top 10 Hardest Judge Questions &amp; Winning Technical Answers (Hinglish)</h2>
+
+    <div class="qa-box">
+      <div class="qa-q">Q1: "Agar gaon ya mandi me internet connection bilkul na ho tab kya hoga?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "Sir, Mapan <strong>Offline-First architecture</strong> par bana hai. Saari OIML R-76 calculations, weather estimation aur SHA-256 hash generation browser ke andar 100% locally execute hoti hain. Saara data browser ke LocalStorage me safely store hota hai aur jaise hi mobile network ya internet wapas aata hai, hamara background REST sync pipeline use bina data loss ke cloud me push kar deta hai."</div>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-q">Q2: "Aapne percentage tolerance formula kyun nahi use kiya standard percentage error ki tarah?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "Sir, Indian Legal Metrology Act aur OIML R-76 standard me percentage tolerance illegal hoti hai. Standard ke hisaab se scale interval (e) par based <strong>non-linear step-function tiers</strong> hoti hain. Jaise Class III scales me 0 se 500e tak &plusmn;0.5e, 500e se 2000e tak &plusmn;1.0e aur 2000e se 10000e tak &plusmn;1.5e tolerance hoti hai. Humne Table 6 ke strict regulatory rules ko implement kiya hai jo court me legally valid evidence banta hai."</div>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-q">Q3: "Certificate ko koi fake ya modify kyun nahi kar sakta?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "Har certificate par <strong>SHA-256 Cryptographic Digest</strong> aur <strong>ECDSA P-256 Digital Signature</strong> hota hai. Certificate ke andar QR code hota hai jo public verification endpoint se connected hai. Agar koi PDF me ek decimal point ya observation bhi change karega, toh mathematical hash turant mismatch ho jayega aur certificate invalid declare ho jayega."</div>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-q">Q4: "Alag-alag labs aur users ke beech data privacy aur isolation kaise ensure karte ho?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "Humne strict <strong>Role-Based Access Control (RBAC)</strong> aur Tenant Data Isolation lagaya hai. Normal Testing Metrologists ko sirf unke bay aur unke create kiye huye instruments/reports dikhte hain, jabki Chief Standards Officer (Admin) ke paas global audit trail aur user management ke full privileges hote hain."</div>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-q">Q5: "Government labs ya proxy network me WebSockets block ho jayein toh kya system fail hoga?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "Bilkul nahi sir! Humne <strong>Dual-Mode Transport Layer</strong> develop kiya hai. Agar WebSockets block ya drop hote hain, toh hamara custom `dbService` automatically direct <strong>HTTPS REST API calls (PUT/GET/DELETE)</strong> par switch ho jata hai jisme CORS headers enabled hain. Isse kisi bhi restricted network ya proxy par 100% uptime milti hai."</div>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-q">Q6: "Weighing scale ke liye live weather aur environmental data ki kya zaroorat hai?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "ISO/IEC 17025 Clause 6.3 aur OIML Clause 3.9.2 ke mutabik Class I aur Class II analytical scales air buoyancy se affect hote hain. Agar temperature me 5&deg;C ya pressure me 20 hPa ka shift aata hai, toh hawa ki density 3% badal jati hai jisse weights par upward buoyancy force badal jati hai. Mapan live GPS aur weather data se live air density (&rho;<sub>a</sub>) calculate karke buoyancy distortion detect karta hai."</div>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-q">Q7: "Agar poore desh ke hazaron mandis ek sath use karein toh system slow nahi hoga?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "Nahi sir! Kyunki saari heavy mathematical calculations client side (browser edge) par execute hoti hain, hamare backend aur database par sirf lightweight JSON metadata sync hota hai. Firebase RTDB, Firestore aur Node.js microservices ke sath system horizontally scale ho sakta hai aur lakhon concurrent inspections bina lag ke handle kar sakta hai."</div>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-q">Q8: "Field inspection officer bina account login kiye certificate verify kaise karega?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "QR code ek public verification route (<code>/api/v1/verify/:reportId</code>) par point karta hai. Kisi bhi inspection officer ko login ki zaroorat nahi hai — wo apne normal phone camera se QR code scan karke direct government registry se genuine digital certificate aur SHA-256 seal status live dekh sakta hai."</div>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-q">Q9: "Aapki database architecture kya hai?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "Humne <strong>Tiered Database Architecture</strong> use ki hai: <strong>Firebase Realtime Database</strong> ultra-fast live synchronization ke liye, <strong>Cloud Firestore</strong> document archives ke liye, aur <strong>Prisma ORM with PostgreSQL/SQLite</strong> backend compliance audit logs ke liye."</div>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-q">Q10: "Market me existing solutions se Mapan kaise better hai?"</div>
+      <div class="qa-a"><strong>Aapka Answer:</strong> "Existing solutions ya toh manual Excel templates hain ya fir kisi specific hardware vendor ka expensive desktop software. Mapan ek <strong>Hardware-Agnostic, Web-Native Legal Metrology OS</strong> hai jo automated OIML R-76 math, live environmental capture, cryptographic digital sealing aur dynamic mobile QR verification ko ek single unified platform me integrate karta hai."</div>
+    </div>
+
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; color: var(--muted); font-size: 12px;">
+      Smart India Hackathon 2026 · Problem Statement #26035 · Developed with ❤️ by <strong>Team CodeSmiths</strong>
+    </div>
+  </div>
+</body>
+</html>
