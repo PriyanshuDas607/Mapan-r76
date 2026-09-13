@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Sliders, CheckCircle2, AlertTriangle, ShieldCheck, Scale, Building2, MapPin, Plus, Trash2 } from 'lucide-react'
+import { Sliders, CheckCircle2, AlertTriangle, ShieldCheck, Scale, Building2, MapPin, Plus, Trash2, Lock } from 'lucide-react'
 
 import CalibrationReport from './CalibrationReport.tsx'
 import type { ReportData, InstrumentInfo, ObservationRow } from './CalibrationReport.tsx'
@@ -118,7 +118,7 @@ export default function PrecisionTestWorkspace({
       setTemperature(data.temperature)
       setHumidity(data.humidity)
       setPressure(data.pressure)
-      if (data.locationName && (!instrumentForm.location || instrumentForm.location.includes('Calibration Bay'))) {
+      if (data.locationName) {
         setInstrumentForm((prev) => ({ ...prev, location: data.locationName }))
       }
     } catch (err) {
@@ -578,27 +578,43 @@ export default function PrecisionTestWorkspace({
               />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#567073' }}>
-              Ambient Temperature (Auto / Manual)
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Lock size={10} style={{ color: '#0f7c76' }} /> Test Location (GPS Autofill)
+              </span>
               <input
-                style={{ height: '32px', border: '1px solid #d4e2de', borderRadius: '4px', padding: '0 8px', fontSize: '10px' }}
+                readOnly
+                style={{ height: '32px', border: '1px solid #c9ded7', borderRadius: '4px', padding: '0 8px', fontSize: '10px', background: '#edf4f2', color: '#134e48', cursor: 'not-allowed', fontWeight: 600 }}
+                value={instrumentForm.location || 'Detecting Live GPS...'}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#567073' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Lock size={10} style={{ color: '#0f7c76' }} /> Ambient Temperature (Sensor-Locked)
+              </span>
+              <input
+                readOnly
+                style={{ height: '32px', border: '1px solid #c9ded7', borderRadius: '4px', padding: '0 8px', fontSize: '10px', background: '#edf4f2', color: '#134e48', cursor: 'not-allowed', fontWeight: 600 }}
                 value={temperature}
-                onChange={(e) => setTemperature(e.target.value)}
               />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#567073' }}>
-              Relative Humidity (Auto / Manual)
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Lock size={10} style={{ color: '#0f7c76' }} /> Relative Humidity (Sensor-Locked)
+              </span>
               <input
-                style={{ height: '32px', border: '1px solid #d4e2de', borderRadius: '4px', padding: '0 8px', fontSize: '10px' }}
+                readOnly
+                style={{ height: '32px', border: '1px solid #c9ded7', borderRadius: '4px', padding: '0 8px', fontSize: '10px', background: '#edf4f2', color: '#134e48', cursor: 'not-allowed', fontWeight: 600 }}
                 value={humidity}
-                onChange={(e) => setHumidity(e.target.value)}
               />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#567073' }}>
-              Barometric Pressure (Auto / Manual)
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Lock size={10} style={{ color: '#0f7c76' }} /> Barometric Pressure (Sensor-Locked)
+              </span>
               <input
-                style={{ height: '32px', border: '1px solid #d4e2de', borderRadius: '4px', padding: '0 8px', fontSize: '10px' }}
+                readOnly
+                style={{ height: '32px', border: '1px solid #c9ded7', borderRadius: '4px', padding: '0 8px', fontSize: '10px', background: '#edf4f2', color: '#134e48', cursor: 'not-allowed', fontWeight: 600 }}
                 value={pressure}
-                onChange={(e) => setPressure(e.target.value)}
               />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#567073', gridColumn: 'span 2' }}>
@@ -609,6 +625,25 @@ export default function PrecisionTestWorkspace({
                 onChange={(e) => setStandardWeightsRef(e.target.value)}
               />
             </label>
+            <div
+              style={{
+                gridColumn: '1 / -1',
+                background: '#e8f4f1',
+                border: '1px solid #cde6e0',
+                borderRadius: '5px',
+                padding: '7px 10px',
+                fontSize: '9.5px',
+                color: '#0f615c',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Lock size={12} style={{ flexShrink: 0 }} />
+              <span>
+                <strong>ISO/IEC 17025 Regulatory Standard:</strong> Location, Temperature, Humidity, and Pressure are automatically fetched and locked to prevent user tampering in legal metrology audits.
+              </span>
+            </div>
           </div>
         )}
       </div>

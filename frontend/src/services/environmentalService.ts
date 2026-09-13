@@ -139,7 +139,23 @@ export async function autoFetchEnvironmentalData(): Promise<EnvironmentalData> {
         )
       })
 
-      const locationName = `GPS Location (${coords.latitude.toFixed(2)}°N, ${coords.longitude.toFixed(2)}°E)`
+      let locationName = `GPS (${coords.latitude.toFixed(2)}°N, ${coords.longitude.toFixed(2)}°E)`
+      try {
+        const rev = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.latitude}&longitude=${coords.longitude}`,
+          { signal: AbortSignal.timeout(3000) }
+        )
+        if (rev.ok) {
+          const revData = await rev.json()
+          const locality = revData.locality || revData.city || revData.principalSubdivision
+          if (locality) {
+            locationName = `${locality}, ${revData.countryCode || 'IN'} [GPS]`
+          }
+        }
+      } catch {
+        // Fallback to GPS coordinate string
+      }
+
       return await fetchOpenMeteoData(coords.latitude, coords.longitude, locationName, 'GPS_LIVE')
     } catch {
       // Geolocation denied or timed out; proceed to IP fallback
