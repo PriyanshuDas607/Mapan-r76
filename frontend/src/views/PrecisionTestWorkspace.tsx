@@ -148,8 +148,8 @@ export default function PrecisionTestWorkspace({
     return tNum < -10 || tNum > 40
   }, [temperature])
 
-  // Report Modal & SHA-256 Hash
-  const [showReportModal, setShowReportModal] = useState(false)
+  // Active sealed report instance for modal display & printing
+  const [activeModalReport, setActiveModalReport] = useState<ReportData | null>(null)
   const [sha256Hash, setSha256Hash] = useState('')
 
   const update = (id: number, key: 'load' | 'indication', value: string) => {
@@ -170,7 +170,7 @@ export default function PrecisionTestWorkspace({
   const reviews = valid.filter((item) => item.result === 'Review').length
   const overallResult: 'Pass' | 'Review' = valid.length > 0 && reviews === 0 ? 'Pass' : 'Review'
 
-  // Calculate real SHA-256 cryptographic seal
+  // Calculate live preview SHA-256 cryptographic seal
   useEffect(() => {
     const payload = {
       instrument: {
@@ -190,8 +190,8 @@ export default function PrecisionTestWorkspace({
     generateSHA256Hash(payload).then((hash) => setSha256Hash(hash))
   }, [instrumentForm, accuracyClass, maxCapacity, interval, rows, temperature, humidity, pressure, standardWeightsRef, userName, overallResult])
 
-  // Construct structured Report Data
-  const reportData: ReportData = useMemo(() => {
+  const handleSaveAndOpen = async () => {
+    if (valid.length === 0) return
     const now = new Date()
     const issueDate = now.toLocaleDateString('en-GB', {
       day: '2-digit',
@@ -217,7 +217,26 @@ export default function PrecisionTestWorkspace({
       }
     })
 
-    return {
+    const payload = {
+      reportNumber,
+      instrument: {
+        serial: instrumentForm.serial || 'UNREGISTERED',
+        model: instrumentForm.model || 'Custom Balance',
+        manufacturer: instrumentForm.manufacturer || 'General',
+        accuracy: accuracyClass,
+        max: maxCapacity,
+        interval: interval,
+      },
+      readings: rows.map((r) => ({ load: r.load, indication: r.indication })),
+      conditions: { temperature, humidity, pressure, standardWeightsRef },
+      operator: userName,
+      result: overallResult,
+      timestamp: now.toISOString(),
+    }
+
+    const calculatedHash = await generateSHA256Hash(payload)
+
+    const finalReport: ReportData = {
       reportNumber,
       issueDate,
       issueTime,
@@ -235,14 +254,13 @@ export default function PrecisionTestWorkspace({
       },
       observations: observationRows,
       overallResult,
-      sha256Hash: sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      sha256Hash: calculatedHash || sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     }
-  }, [rows, computed, interval, accuracyClass, maxCapacity, instrumentForm, temperature, humidity, pressure, standardWeightsRef, userName, overallResult, sha256Hash])
 
-  const handleSaveAndOpen = () => {
-    if (valid.length === 0) return
-    if (onSaveReport) onSaveReport(reportData)
-    setShowReportModal(true)
+    if (onSaveReport) {
+      onSaveReport(finalReport)
+    }
+    setActiveModalReport(finalReport)
   }
 
 
@@ -863,10 +881,10 @@ export default function PrecisionTestWorkspace({
       </section>
 
       {/* Official Certificate Modal / Print Target */}
-      {showReportModal && (
+      {activeModalReport && (
         <CalibrationReport
-          data={reportData}
-          onClose={() => setShowReportModal(false)}
+          data={activeModalReport}
+          onClose={() => setActiveModalReport(null)}
           onPrint={() => window.print()}
         />
       )}

@@ -3,6 +3,7 @@ import { ShieldCheck, CheckCircle2, AlertTriangle, Scale, CloudSun, ArrowLeft, P
 import type { ReportData } from './CalibrationReport.tsx'
 import CalibrationReport from './CalibrationReport.tsx'
 import { loadReportsFromFirestore, getLocalReports } from '../services/dbService.ts'
+import { rtdbRestGet } from '../services/firebase.ts'
 import '../styles/report.css'
 
 type Props = {
@@ -20,25 +21,62 @@ export default function PublicVerificationView({ verifyId, onExit }: Props) {
     let active = true
     setLoading(true)
 
-    // Check local storage first
-    const local = getLocalReports()
-    const foundLocal = local.find(r => r.reportNumber === verifyId)
-    if (foundLocal) {
-      setReport(foundLocal)
-      setLoading(false)
+    const normalizedTarget = verifyId.trim().toLowerCase()
+
+    const resolveReport = async () => {
+      // 1. Check local storage first
+      const local = getLocalReports()
+      const foundLocal = local.find(r => (r.reportNumber || '').trim().toLowerCase() === normalizedTarget)
+      if (foundLocal && active) {
+        setReport(foundLocal)
+        setLoading(false)
+        return
+      }
+
+      // 2. Direct REST fetch for this specific report ID (super fast & reliable)
+      try {
+        const directData = await rtdbRestGet<ReportData>(`reports/${verifyId.trim()}`)
+        if (directData && (directData.reportNumber || directData.instrument) && active) {
+          const formatted: ReportData = {
+            ...directData,
+            reportNumber: directData.reportNumber || verifyId.trim(),
+          }
+          setReport(formatted)
+          setLoading(false)
+          return
+        }
+      } catch (err) {
+        console.warn('Direct RTDB fetch failed, falling back:', err)
+      }
+
+      // 3. Query all cloud reports from Firebase
+      try {
+        const cloudReports = await loadReportsFromFirestore()
+        if (!active) return
+        const foundCloud = cloudReports.find(r => (r.reportNumber || '').trim().toLowerCase() === normalizedTarget)
+        if (foundCloud) {
+          setReport(foundCloud)
+          setLoading(false)
+          return
+        }
+      } catch (err) {
+        console.warn('Cloud reports load failed:', err)
+      }
+
+      // 4. One quick retry after 1.5s in case write is currently in-flight
+      setTimeout(async () => {
+        if (!active) return
+        try {
+          const directRetry = await rtdbRestGet<ReportData>(`reports/${verifyId.trim()}`)
+          if (directRetry && (directRetry.reportNumber || directRetry.instrument)) {
+            setReport({ ...directRetry, reportNumber: directRetry.reportNumber || verifyId.trim() })
+          }
+        } catch {}
+        if (active) setLoading(false)
+      }, 1500)
     }
 
-    // Always fetch latest from Firebase RTDB
-    loadReportsFromFirestore().then((cloudReports) => {
-      if (!active) return
-      const foundCloud = cloudReports.find(r => r.reportNumber === verifyId)
-      if (foundCloud) {
-        setReport(foundCloud)
-      }
-      setLoading(false)
-    }).catch(() => {
-      if (active) setLoading(false)
-    })
+    resolveReport()
 
     return () => {
       active = false
