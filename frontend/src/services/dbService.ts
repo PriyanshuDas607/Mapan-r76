@@ -453,8 +453,52 @@ export async function loadInstrumentsFromFirestore(): Promise<Instrument[]> {
 export const loadInstrumentsFromDatabase = loadInstrumentsFromFirestore
 
 // ==========================================
-// REPORTS REALTIME DB & FIRESTORE SYNC
+// REPORTS & INSTRUMENT READINGS REALTIME DB & FIRESTORE SYNC
 // ==========================================
+
+/**
+ * Sync individual instrument observations/readings under /instrument_readings/{serial}/{reportNumber}
+ * so that all readings are cleanly categorized by instrument in Realtime Database.
+ */
+export async function syncInstrumentReadingsToFirestore(report: ReportData): Promise<boolean> {
+  const serial = report.instrument?.serial || 'CUSTOM-UNKNOWN'
+  const repNum = report.reportNumber || `REP-${Date.now()}`
+  
+  const readingsPayload = sanitizeForFirestore({
+    instrumentSerial: serial,
+    instrumentModel: report.instrument?.model || 'Precision NAWI Scale',
+    accuracyClass: report.instrument?.accuracy || 'I',
+    reportNumber: repNum,
+    technicianName: report.technicianName || 'Verification Officer',
+    userEmail: report.userEmail || '',
+    userId: report.userId || '',
+    issueDate: report.issueDate || '',
+    issueTime: report.issueTime || '',
+    overallResult: report.overallResult || 'Pass',
+    temperature: report.temperature || '',
+    humidity: report.humidity || '',
+    pressure: report.pressure || '',
+    standardWeightsRef: report.standardWeightsRef || '',
+    sha256Hash: report.sha256Hash || '',
+    observationsCount: report.observations?.length || 0,
+    observations: report.observations || [],
+    recordedAt: new Date().toISOString(),
+  })
+
+  const path = `instrument_readings/${serial}/${repNum}`
+  const restPromise = rtdbRestPut(path, readingsPayload).catch(() => false)
+  const rtdbPromise = firebaseWriteWithRetry(
+    () => set(ref(rtdb, path), readingsPayload),
+    `RTDB instrument readings ${serial}/${repNum}`
+  )
+  const fsPromise = firebaseWriteWithRetry(
+    () => setDoc(doc(db, 'instrument_readings', `${serial}_${repNum}`), readingsPayload, { merge: true }),
+    `Firestore instrument readings ${serial}_${repNum}`
+  )
+
+  await Promise.allSettled([restPromise, rtdbPromise, fsPromise])
+  return true
+}
 
 /**
  * Sync report to localStorage FIRST (instant), then to Firebase REST, SDK & Firestore.
@@ -481,9 +525,13 @@ export async function syncReportToFirestore(report: ReportData): Promise<boolean
     `Firestore report ${report.reportNumber}`
   )
 
-  await Promise.allSettled([restPromise, rtdbPromise, fsPromise])
+  // 3. Also sync structured instrument readings under /instrument_readings/{serial}/{reportNumber}
+  const readingsPromise = syncInstrumentReadingsToFirestore(report).catch(() => false)
+
+  await Promise.allSettled([restPromise, rtdbPromise, fsPromise, readingsPromise])
   return true
 }
+
 
 export const syncReportToDatabase = syncReportToFirestore
 

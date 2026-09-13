@@ -55,26 +55,38 @@ export default function UserManagementView({
   const [formPhone, setFormPhone] = useState('')
   const [error, setError] = useState('')
 
-  // Live Realtime Database sync on mount + active listener
+  // Live Realtime Database sync on mount + active listener + 3s auto-poll
   useEffect(() => {
     let cancelled = false
-    loadUsersFromFirestore().then((cloudUsers) => {
-      if (!cancelled && cloudUsers.length > 0) {
-        setUsers(cloudUsers)
-      }
-    })
+    const fetchUsers = () => {
+      loadUsersFromFirestore().then((cloudUsers) => {
+        if (!cancelled && cloudUsers.length > 0) {
+          setUsers(cloudUsers)
+        }
+      })
+    }
 
+    fetchUsers()
+
+    // 1. Live RTDB WebSocket listener
     const unsubscribe = subscribeToUsers((liveUsers) => {
       if (!cancelled && liveUsers.length > 0) {
         setUsers(liveUsers)
       }
     })
 
+    // 2. High-reliability 3-second background polling via REST (instant cross-device updates)
+    const pollInterval = setInterval(() => {
+      if (!cancelled) fetchUsers()
+    }, 3000)
+
     return () => {
       cancelled = true
       unsubscribe()
+      clearInterval(pollInterval)
     }
   }, [])
+
 
   // Manual cloud refresh button
   const handleManualRefresh = useCallback(() => {

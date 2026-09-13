@@ -108,35 +108,47 @@ export default function App() {
 
   // Live Realtime Database Synchronization — merges cloud with local on every update
   useEffect(() => {
-    // Initial cloud fetch (merges with localStorage inside the functions)
-    loadInstrumentsFromFirestore().then((list) => {
-      if (list && list.length > 0) setInstruments(list)
-    })
-    loadReportsFromFirestore().then((list) => {
-      if (list && list.length > 0) setReports(list)
-    })
-    loadAuditLogsFromFirestore().then((list) => {
-      if (list && list.length > 0) setAuditEvents(list)
-    })
+    let cancelled = false
+    const fetchAllData = () => {
+      loadInstrumentsFromFirestore().then((list) => {
+        if (!cancelled && list && list.length > 0) setInstruments(list)
+      })
+      loadReportsFromFirestore().then((list) => {
+        if (!cancelled && list && list.length > 0) setReports(list)
+      })
+      loadAuditLogsFromFirestore().then((list) => {
+        if (!cancelled && list && list.length > 0) setAuditEvents(list)
+      })
+    }
 
-    // Active live listeners for instant real-time data sync across all devices
-    // These callbacks receive merged (cloud + local) data from dbService
+    // Initial cloud fetch
+    fetchAllData()
+
+    // 1. Active live WebSocket listeners
     const unsubInst = subscribeToInstruments((list) => {
-      if (list && list.length > 0) setInstruments(list)
+      if (!cancelled && list && list.length > 0) setInstruments(list)
     })
     const unsubRep = subscribeToReports((list) => {
-      if (list && list.length > 0) setReports(list)
+      if (!cancelled && list && list.length > 0) setReports(list)
     })
     const unsubAudit = subscribeToAuditLogs((list) => {
-      if (list && list.length > 0) setAuditEvents(list)
+      if (!cancelled && list && list.length > 0) setAuditEvents(list)
     })
 
+    // 2. High-reliability 4-second background polling for seamless multi-device updates
+    const pollTimer = setInterval(() => {
+      if (!cancelled) fetchAllData()
+    }, 4000)
+
     return () => {
+      cancelled = true
       unsubInst()
       unsubRep()
       unsubAudit()
+      clearInterval(pollTimer)
     }
   }, [])
+
 
   // Listen for session changes across tabs or custom dispatch
   useEffect(() => {
