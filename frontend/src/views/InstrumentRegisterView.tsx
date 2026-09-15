@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Edit2, Trash2, Search } from 'lucide-react'
+import type { UserRole } from '../services/authStore.ts'
 import '../styles/workflow.css'
 
 export type Instrument = {
@@ -14,11 +15,12 @@ export type Instrument = {
   createdBy?: string
   createdByName?: string
   userEmail?: string
+  labId?: string
 }
 
 type Props = {
   instruments: Instrument[]
-  userRole?: 'ADMIN' | 'OPERATOR'
+  userRole?: UserRole
   onAddInstrument: (instrument: Instrument) => void
   onUpdateInstrument?: (serial: string, updated: Partial<Instrument>) => void
   onDeleteInstrument?: (serial: string) => void
@@ -28,13 +30,16 @@ type Props = {
 
 export default function InstrumentRegisterView({
   instruments,
-  userRole = 'OPERATOR',
+  userRole = 'TEST_ENGINEER',
   onAddInstrument,
   onUpdateInstrument,
   onDeleteInstrument,
   onSelectInstrumentForTest,
   navigate,
 }: Props) {
+  // Derived permissions from 4-tier role
+  const canDelete = userRole === 'SUPER_ADMIN' || userRole === 'LAB_ADMIN'
+  const canEdit   = userRole === 'SUPER_ADMIN' || userRole === 'LAB_ADMIN'
   const [open, setOpen] = useState(false)
   const [editingInst, setEditingInst] = useState<Instrument | null>(null)
   const [search, setSearch] = useState('')
@@ -187,7 +192,7 @@ export default function InstrumentRegisterView({
                   <th>Capacity</th>
                   <th>Status</th>
                   <th>Location</th>
-                  {userRole === 'ADMIN' && <th>Registered By</th>}
+                  {canEdit && <th>Registered By</th>}
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -213,7 +218,7 @@ export default function InstrumentRegisterView({
                       </span>
                     </td>
                     <td>{item.location || 'Not specified'}</td>
-                    {userRole === 'ADMIN' && (
+                    {canEdit && (
                       <td>
                         <strong style={{ fontSize: '11px', color: '#183e4e' }}>
                           {item.createdByName || 'Administrator'}
@@ -237,7 +242,7 @@ export default function InstrumentRegisterView({
                           Start test →
                         </button>
 
-                        {userRole === 'ADMIN' && (
+                        {canEdit && (
                           <>
                             <button
                               className="text-button"
@@ -247,14 +252,16 @@ export default function InstrumentRegisterView({
                             >
                               <Edit2 size={12} /> Edit
                             </button>
-                            <button
-                              className="text-button"
-                              onClick={() => handleDelete(item)}
-                              title="Delete instrument"
-                              style={{ color: '#cf222e', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
-                            >
-                              <Trash2 size={12} /> Delete
-                            </button>
+                            {canDelete && (
+                              <button
+                                className="text-button"
+                                onClick={() => handleDelete(item)}
+                                title="Delete instrument"
+                                style={{ color: '#cf222e', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                              >
+                                <Trash2 size={12} /> Delete
+                              </button>
+                            )}
                           </>
                         )}
                       </div>

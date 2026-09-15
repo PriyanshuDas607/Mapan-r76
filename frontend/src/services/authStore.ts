@@ -19,7 +19,20 @@ import {
   rtdbRestDelete,
 } from './firebase.ts'
 
-export type UserRole = 'ADMIN' | 'OPERATOR'
+export type UserRole = 'SUPER_ADMIN' | 'LAB_ADMIN' | 'SUPERVISOR' | 'TEST_ENGINEER'
+
+/** Safe migration: map legacy 2-role values to the new 4-tier hierarchy */
+export function migrateLegacyRole(role: string, email?: string): UserRole {
+  if (role === 'SUPER_ADMIN' || role === 'LAB_ADMIN' || role === 'SUPERVISOR' || role === 'TEST_ENGINEER') {
+    return role as UserRole
+  }
+  // Legacy ADMIN: super admin email becomes SUPER_ADMIN, others become LAB_ADMIN
+  if (role === 'ADMIN') {
+    return email?.toLowerCase() === 'admin@mapan.gov' ? 'SUPER_ADMIN' : 'LAB_ADMIN'
+  }
+  // Legacy OPERATOR → TEST_ENGINEER
+  return 'TEST_ENGINEER'
+}
 
 export type User = {
   id: string
@@ -29,6 +42,7 @@ export type User = {
   role: UserRole
   active: boolean
   laboratory: string
+  labId?: string        // UUID of assigned laboratory (null for SUPER_ADMIN)
   department: string
   jobTitle?: string
   phone?: string
@@ -39,15 +53,16 @@ export type User = {
 const STORAGE_USERS_KEY = 'mapan_metrology_users'
 const STORAGE_SESSION_KEY = 'mapan_metrology_session'
 
-// Designated Primary Administrator (Stored securely as Admin)
+// Designated Super Administrator — global access across all laboratories
 export const DEFAULT_ADMIN_USER: User = {
   id: 'USR-ADMIN-01',
   name: 'Dr. Vikram Mehta',
   email: 'admin@mapan.gov',
   passwordHash: 'Admin@2026',
-  role: 'ADMIN',
+  role: 'SUPER_ADMIN',
   active: true,
-  laboratory: 'Central Standards Laboratory',
+  laboratory: 'All Laboratories (Global)',
+  labId: undefined, // SUPER_ADMIN has no lab restriction
   department: 'Directorate of Legal Metrology',
   jobTitle: 'Chief Standards Officer / Director',
   phone: '+91 98765 43210',
@@ -71,7 +86,7 @@ export async function syncUserToFirestore(user: User): Promise<boolean> {
     active: user.active ?? true,
     laboratory: user.laboratory || 'Central Standards Laboratory',
     department: user.department || 'Precision Calibration Division',
-    jobTitle: user.jobTitle || (user.role === 'ADMIN' ? 'Chief Standards Officer' : 'Laboratory Metrologist'),
+    jobTitle: user.jobTitle || (user.role === 'SUPER_ADMIN' || user.role === 'LAB_ADMIN' ? 'Chief Standards Officer' : 'Laboratory Metrologist'),
     phone: user.phone || '+91 98765 43210',
     createdAt: user.createdAt || new Date().toISOString(),
     lastLogin: user.lastLogin || new Date().toISOString(),
@@ -148,18 +163,22 @@ function parseUserEntries(val: Record<string, Record<string, unknown>>): User[] 
   const list: User[] = []
   Object.entries(val).forEach(([id, data]) => {
     if (data && (data.email || data.name)) {
+      const email = ((data.email as string) || '').toLowerCase().trim()
+      const rawRole = (data.role as string) || 'OPERATOR'
       list.push({
         id: (data.id as string) || id,
         name: (data.name as string) || (data.displayName as string) || 'Personnel',
-        email: ((data.email as string) || '').toLowerCase().trim(),
+        email,
         passwordHash:
           (data.passwordHash as string) ||
           (data.password as string) ||
           (data.password_hash as string) ||
           '',
-        role: data.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR',
+        // Migrate legacy roles to new 4-tier system
+        role: migrateLegacyRole(rawRole, email),
         active: data.active !== false,
         laboratory: (data.laboratory as string) || 'Central Standards Laboratory',
+        labId: (data.labId as string) || undefined,
         department: (data.department as string) || 'Precision Calibration Division',
         jobTitle: (data.jobTitle as string) || 'Metrologist',
         phone: (data.phone as string) || '',
@@ -212,18 +231,21 @@ export async function loadUsersFromFirestore(): Promise<User[]> {
       snapshot.forEach((d) => {
         const data = d.data() as Record<string, unknown>
         if (data && (data.email || data.name)) {
+          const email = ((data.email as string) || '').toLowerCase().trim()
+          const rawRole = (data.role as string) || 'OPERATOR'
           list.push({
             id: (data.id as string) || d.id,
             name: (data.name as string) || (data.displayName as string) || 'Personnel',
-            email: ((data.email as string) || '').toLowerCase().trim(),
+            email,
             passwordHash:
               (data.passwordHash as string) ||
               (data.password as string) ||
               (data.password_hash as string) ||
               '',
-            role: data.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR',
+            role: migrateLegacyRole(rawRole, email),
             active: data.active !== false,
             laboratory: (data.laboratory as string) || 'Central Standards Laboratory',
+            labId: (data.labId as string) || undefined,
             department: (data.department as string) || 'Precision Calibration Division',
             jobTitle: (data.jobTitle as string) || 'Metrologist',
             phone: (data.phone as string) || '',
@@ -264,18 +286,21 @@ export function subscribeToUsers(callback: (users: User[]) => void): () => void 
         const list: User[] = []
         Object.entries(val).forEach(([id, data]) => {
           if (data && (data.email || data.name)) {
+            const email = ((data.email as string) || '').toLowerCase().trim()
+            const rawRole = (data.role as string) || 'OPERATOR'
             list.push({
               id: (data.id as string) || id,
               name: (data.name as string) || (data.displayName as string) || 'Personnel',
-              email: ((data.email as string) || '').toLowerCase().trim(),
+              email,
               passwordHash:
                 (data.passwordHash as string) ||
                 (data.password as string) ||
                 (data.password_hash as string) ||
                 '',
-              role: data.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR',
+              role: migrateLegacyRole(rawRole, email),
               active: data.active !== false,
               laboratory: (data.laboratory as string) || 'Central Standards Laboratory',
+              labId: (data.labId as string) || undefined,
               department: (data.department as string) || 'Precision Calibration Division',
               jobTitle: (data.jobTitle as string) || 'Metrologist',
               phone: (data.phone as string) || '',
@@ -426,15 +451,16 @@ export function registerNewUser(
     return { success: false, error: 'An account with this email already exists. Please sign in or use a different email.' }
   }
 
-  // Public sign-ups are assigned 'OPERATOR' role
+  // Public sign-ups are assigned 'TEST_ENGINEER' role (most restricted operational role)
   const newUser: User = {
     id: `USR-${Date.now()}`,
     name: name.trim(),
     email: normalizedEmail,
     passwordHash: trimmedPassword,
-    role: 'OPERATOR',
+    role: 'TEST_ENGINEER',
     active: true,
     laboratory,
+    labId: undefined, // must be assigned by a Lab Admin
     department: 'Testing Metrology Bay',
     jobTitle,
     phone: '',
@@ -461,7 +487,9 @@ export function adminCreateUser(
   password: string,
   role: UserRole,
   department = 'Precision Metrology Bay',
-  jobTitle = 'Testing Metrologist'
+  jobTitle = 'Testing Metrologist',
+  laboratory = 'Central Standards Laboratory',
+  labId?: string
 ): { success: boolean; error?: string; user?: User } {
   const normalizedEmail = email.toLowerCase().trim()
 
@@ -481,7 +509,8 @@ export function adminCreateUser(
     passwordHash: password,
     role,
     active: true,
-    laboratory: 'Central Standards Laboratory',
+    laboratory,
+    labId: labId || undefined,
     department,
     jobTitle,
     phone: '',
@@ -527,18 +556,21 @@ export async function authenticateUser(
           (u) => ((u.email as string) || '').toLowerCase().trim() === normalizedEmail
         )
         if (found) {
+          const foundEmail = ((found.email as string) || '').toLowerCase().trim()
+          const foundRawRole = (found.role as string) || 'OPERATOR'
           matchedUser = {
             id: (found.id as string) || `USR-${Date.now()}`,
             name: (found.name as string) || 'Personnel',
-            email: ((found.email as string) || '').toLowerCase().trim(),
+            email: foundEmail,
             passwordHash:
               (found.passwordHash as string) ||
               (found.password as string) ||
               (found.password_hash as string) ||
               '',
-            role: found.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR',
+            role: migrateLegacyRole(foundRawRole, foundEmail),
             active: found.active !== false,
             laboratory: (found.laboratory as string) || 'Central Standards Laboratory',
+            labId: (found.labId as string) || undefined,
             department: (found.department as string) || 'Precision Calibration Division',
             jobTitle: (found.jobTitle as string) || 'Metrologist',
             phone: (found.phone as string) || '',

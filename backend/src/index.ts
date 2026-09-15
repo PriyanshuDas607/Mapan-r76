@@ -7,15 +7,16 @@ import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { prisma } from './utils/prisma';
 import { generateKeyPairIfNotExists } from './services/signatureService';
-import authRouter from './routes/auth';
+import authRouter       from './routes/auth';
 import instrumentRouter from './routes/instrument';
-import testRouter from './routes/test';
-import verifyRouter from './routes/verify';
+import testRouter       from './routes/test';
+import verifyRouter     from './routes/verify';
+import usersRouter      from './routes/users';
+import labsRouter       from './routes/labs';
 
 dotenv.config();
 
 // ─── One-time startup tasks ────────────────────────────────────────────────────
-// Generate ECDSA P-256 key pair if not already present
 generateKeyPairIfNotExists();
 
 const app = express();
@@ -31,7 +32,6 @@ const limiter = rateLimit({ windowMs: 60 * 1000, max: 100 });
 app.use(limiter);
 
 // ─── Static file serving — PDFs ───────────────────────────────────────────────
-// Reports are served as static files for download
 const UPLOADS_DIR = path.resolve(__dirname, '..', 'uploads', 'reports');
 app.use('/uploads/reports', express.static(UPLOADS_DIR));
 
@@ -39,6 +39,8 @@ app.use('/uploads/reports', express.static(UPLOADS_DIR));
 app.use('/api/v1/auth',        authRouter);
 app.use('/api/v1/instruments', instrumentRouter);
 app.use('/api/v1/tests',       testRouter);
+app.use('/api/v1/users',       usersRouter);
+app.use('/api/v1/labs',        labsRouter);
 
 // ─── Public API routes (no auth required) ─────────────────────────────────────
 // QR code verification — accessible without login
@@ -47,7 +49,6 @@ app.use('/api/v1/verify', verifyRouter);
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', async (_req, res) => {
   try {
-    // Quick DB connectivity check
     await prisma.$queryRaw`SELECT 1`;
     res.json({ success: true, db: 'connected', timestamp: new Date().toISOString() });
   } catch {
@@ -68,6 +69,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 const PORT = process.env.PORT ?? 4000;
 app.listen(PORT, () => {
   console.log(`🚀 Legal Metrology Backend — http://localhost:${PORT}`);
+  console.log(`🔐 RBAC: 4-tier hierarchy (SUPER_ADMIN → LAB_ADMIN → SUPERVISOR → TEST_ENGINEER)`);
   console.log(`📋 Verify endpoint: http://localhost:${PORT}/api/v1/verify/:reportId`);
   console.log(`❤️  Health check:   http://localhost:${PORT}/health`);
 });

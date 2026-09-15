@@ -23,17 +23,26 @@ import {
   DEFAULT_ADMIN_USER,
 } from '../services/authStore.ts'
 import type { User, UserRole } from '../services/authStore.ts'
+import {
+  ROLE_LABELS, ROLE_BADGE_COLORS, creatableRoles,
+  isSuperAdmin,
+} from '../utils/rbac.ts'
 import '../styles/views.css'
 
 type Props = {
-  currentUserId: string
+  currentUser: User
   onAddAuditEvent: (action: string, target: string) => void
 }
 
 export default function UserManagementView({
-  currentUserId,
+  currentUser,
   onAddAuditEvent,
 }: Props) {
+  const currentUserId = currentUser.id
+  const actorRole = currentUser.role
+  const isSA = isSuperAdmin(currentUser)
+  // Roles this actor can create
+  const allowedRoles = creatableRoles(actorRole)
   // Initialize instantly from local cache — NO Firestore wait on mount
   const [users, setUsers] = useState<User[]>(() => getStoredUsers())
   const [search, setSearch] = useState('')
@@ -50,7 +59,7 @@ export default function UserManagementView({
   const [formName, setFormName] = useState('')
   const [formEmail, setFormEmail] = useState('')
   const [formPassword, setFormPassword] = useState('')
-  const [formRole, setFormRole] = useState<UserRole>('OPERATOR')
+  const [formRole, setFormRole] = useState<UserRole>('TEST_ENGINEER')
   const [formDept, setFormDept] = useState('Precision Metrology Bay')
   const [formPhone, setFormPhone] = useState('')
   const [error, setError] = useState('')
@@ -159,7 +168,7 @@ export default function UserManagementView({
     setFormName('')
     setFormEmail('')
     setFormPassword('')
-    setFormRole('OPERATOR')
+    setFormRole('TEST_ENGINEER')
     setFormDept('Precision Metrology Bay')
     setFormPhone('')
     setError('')
@@ -280,8 +289,10 @@ export default function UserManagementView({
         </div>
         <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
           <option value="ALL">All Roles</option>
-          <option value="ADMIN">Administrators</option>
-          <option value="OPERATOR">Laboratory Metrologists</option>
+          <option value="SUPER_ADMIN">Super Administrators</option>
+          <option value="LAB_ADMIN">Laboratory Admins</option>
+          <option value="SUPERVISOR">Supervisors</option>
+          <option value="TEST_ENGINEER">Test Engineers</option>
         </select>
       </section>
 
@@ -293,10 +304,16 @@ export default function UserManagementView({
           <b>{users.filter((u) => u.active).length}</b>Active Accounts
         </span>
         <span>
-          <b>{users.filter((u) => u.role === 'ADMIN').length}</b>Supervisors / Admins
+          <b>{users.filter((u) => u.role === 'SUPER_ADMIN').length}</b>Super Admins
         </span>
         <span>
-          <b>{users.filter((u) => u.role === 'OPERATOR').length}</b>Testing Metrologists
+          <b>{users.filter((u) => u.role === 'LAB_ADMIN').length}</b>Lab Admins
+        </span>
+        <span>
+          <b>{users.filter((u) => u.role === 'SUPERVISOR').length}</b>Supervisors
+        </span>
+        <span>
+          <b>{users.filter((u) => u.role === 'TEST_ENGINEER').length}</b>Test Engineers
         </span>
       </section>
 
@@ -331,8 +348,8 @@ export default function UserManagementView({
                           width: '28px',
                           height: '28px',
                           borderRadius: '50%',
-                          background: user.role === 'ADMIN' ? '#183e4e' : '#e4f1ed',
-                          color: user.role === 'ADMIN' ? '#ffffff' : '#0f7c76',
+                          background: (user.role === 'SUPER_ADMIN' || user.role === 'LAB_ADMIN') ? '#183e4e' : '#e4f1ed',
+                          color: (user.role === 'SUPER_ADMIN' || user.role === 'LAB_ADMIN') ? '#ffffff' : '#0f7c76',
                           display: 'grid',
                           placeItems: 'center',
                           fontSize: '10px',
@@ -355,11 +372,11 @@ export default function UserManagementView({
                         fontSize: '9px',
                         fontFamily: 'DM Mono, monospace',
                         fontWeight: 700,
-                        background: user.role === 'ADMIN' ? '#eaf4ff' : '#e6f4ed',
-                        color: user.role === 'ADMIN' ? '#1b64b3' : '#1a7f37',
+                        background: ROLE_BADGE_COLORS[user.role]?.bg ?? '#e6f4ed',
+                        color: ROLE_BADGE_COLORS[user.role]?.color ?? '#1a7f37',
                       }}
                     >
-                      {user.role === 'ADMIN' ? 'SUPERVISOR (ADMIN)' : 'METROLOGIST (OPERATOR)'}
+                      {ROLE_LABELS[user.role] ?? user.role}
                     </span>
                   </td>
                   <td>
@@ -488,8 +505,11 @@ export default function UserManagementView({
                   value={formRole}
                   onChange={(e) => setFormRole(e.target.value as UserRole)}
                 >
-                  <option value="OPERATOR">Laboratory Metrologist (Operator)</option>
-                  <option value="ADMIN">Laboratory Supervisor (Admin - Full CRUD)</option>
+                  {allowedRoles.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
@@ -613,10 +633,18 @@ export default function UserManagementView({
                   onChange={(e) =>
                     setEditingUser({ ...editingUser, role: e.target.value as UserRole })
                   }
+                  // Prevent role escalation in UI
+                  disabled={editingUser.id === currentUserId}
                 >
-                  <option value="OPERATOR">Laboratory Metrologist (Operator)</option>
-                  <option value="ADMIN">Laboratory Supervisor (Admin - Full CRUD)</option>
+                  {(isSA ? Object.keys(ROLE_LABELS) as UserRole[] : allowedRoles).map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </option>
+                  ))}
                 </select>
+                {editingUser.id === currentUserId && (
+                  <small style={{ color: '#cf222e' }}>You cannot change your own role.</small>
+                )}
               </label>
               <label>
                 Department / Section

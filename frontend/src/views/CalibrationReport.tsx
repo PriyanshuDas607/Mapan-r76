@@ -40,6 +40,7 @@ export type ReportData = {
   instrument: InstrumentInfo
   observations: ObservationRow[]
   overallResult: 'Pass' | 'Review'
+  labId?: string
   sha256Hash: string
 }
 

@@ -12,6 +12,10 @@ import { getCurrentSession, setCurrentSession } from './services/authStore.ts'
 import type { User } from './services/authStore.ts'
 import { generateSHA256Hash } from './utils/cryptoUtils.ts'
 import {
+  isSuperAdmin, isLabAdminOrAbove,
+  ROLE_LABELS, ROLE_BADGE_COLORS, canAccessLab,
+} from './utils/rbac.ts'
+import {
   syncInstrumentToFirestore,
   deleteInstrumentFromFirestore,
   loadInstrumentsFromFirestore,
@@ -188,12 +192,23 @@ export default function App() {
     }
   }, [])
 
-  const isAdmin = currentUser?.role === 'ADMIN'
+  const isAdmin      = isSuperAdmin(currentUser) || isLabAdminOrAbove(currentUser)
+  const isSA         = isSuperAdmin(currentUser)
+  const isLA         = currentUser?.role === 'LAB_ADMIN'
+  const isSupervisor = currentUser?.role === 'SUPERVISOR'
 
-  // User Data Isolation: Regular users only see their own data, Admins see all
+  // User Data Isolation: Filter by role and lab scope
   const visibleInstruments = useMemo(() => {
     if (!currentUser) return []
-    if (isAdmin) return instruments
+    // SUPER_ADMIN sees everything
+    if (isSA) return instruments
+    // LAB_ADMIN and SUPERVISOR see their lab's instruments
+    if (isLA || isSupervisor) {
+      return instruments.filter(
+        (i) => canAccessLab(currentUser, i.labId) || !i.labId
+      )
+    }
+    // TEST_ENGINEER sees only instruments they registered or are assigned to
     return instruments.filter(
       (i) =>
         !i.createdBy ||
@@ -201,11 +216,18 @@ export default function App() {
         i.userEmail === currentUser.email ||
         i.createdByName === currentUser.name
     )
-  }, [instruments, currentUser, isAdmin])
+  }, [instruments, currentUser, isSA, isLA, isSupervisor])
 
   const visibleReports = useMemo(() => {
     if (!currentUser) return []
-    if (isAdmin) return reports
+    if (isSA) return reports
+    // LA and SUPERVISOR see their lab's reports
+    if (isLA || isSupervisor) {
+      return reports.filter(
+        (r) => canAccessLab(currentUser, r.labId) || !r.labId
+      )
+    }
+    // TEST_ENGINEER sees only their own reports
     return reports.filter(
       (r) =>
         !r.userId ||
@@ -213,11 +235,24 @@ export default function App() {
         r.userEmail === currentUser.email ||
         r.technicianName === currentUser.name
     )
-  }, [reports, currentUser, isAdmin])
+  }, [reports, currentUser, isSA, isLA, isSupervisor])
 
   const visibleAuditEvents = useMemo(() => {
     if (!currentUser) return []
-    if (isAdmin) return auditEvents
+    if (isSA) return auditEvents // SUPER_ADMIN: all events
+    if (isLA) {
+      // LAB_ADMIN: all events in their lab
+      return auditEvents.filter(
+        (e) => !e.userId || canAccessLab(currentUser, (e as any).labId)
+      )
+    }
+    if (isSupervisor) {
+      // SUPERVISOR: events related to their team (by actor or userId match in lab)
+      return auditEvents.filter(
+        (e) => canAccessLab(currentUser, (e as any).labId) || !e.userId
+      )
+    }
+    // TEST_ENGINEER: only their own events
     return auditEvents.filter(
       (e) =>
         e.userId === currentUser.id ||
@@ -225,7 +260,7 @@ export default function App() {
         e.actor === currentUser.name ||
         (!e.userId && e.actor?.toLowerCase().includes(currentUser.name.toLowerCase()))
     )
-  }, [auditEvents, currentUser, isAdmin])
+  }, [auditEvents, currentUser, isSA, isLA, isSupervisor])
 
   const navigate = (next: string) => setPage(next as Page)
 
@@ -408,22 +443,38 @@ export default function App() {
             <strong>{page}</strong>
           </div>
           <div className="top-actions">
-            {isAdmin && (
-              <span
-                style={{
-                  fontSize: '9.5px',
-                  fontWeight: 800,
-                  color: '#1b64b3',
-                  background: '#eaf4ff',
-                  border: '1px solid #c9e2ff',
-                  borderRadius: '4px',
-                  padding: '3px 8px',
-                  fontFamily: 'DM Mono, monospace',
-                }}
-              >
-                ADMIN SUPER-USER
-              </span>
-            )}
+          {isSA && (
+            <span
+              style={{
+                fontSize: '9.5px',
+                fontWeight: 800,
+                color: '#7c3aed',
+                background: '#f0e6ff',
+                border: '1px solid #ddd6fe',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                fontFamily: 'DM Mono, monospace',
+              }}
+            >
+              SUPER ADMIN · GLOBAL ACCESS
+            </span>
+          )}
+          {isLA && (
+            <span
+              style={{
+                fontSize: '9.5px',
+                fontWeight: 800,
+                color: '#1b64b3',
+                background: '#eaf4ff',
+                border: '1px solid #c9e2ff',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                fontFamily: 'DM Mono, monospace',
+              }}
+            >
+              LAB ADMIN · {currentUser.laboratory}
+            </span>
+          )}
             <button
               className="theme-toggle-btn"
               onClick={toggleTheme}
@@ -513,7 +564,7 @@ export default function App() {
 
         {page === 'Users' && isAdmin && (
           <UserManagementView
-            currentUserId={currentUser.id}
+            currentUser={currentUser}
             onAddAuditEvent={addAuditEvent}
           />
         )}
@@ -533,7 +584,8 @@ export default function App() {
         <footer>
           <span>Mapan Metrology OS · v2.4.1</span>
           <span>
-            Logged in as <strong>{currentUser.name}</strong> ({currentUser.role}) · OIML R 76 RBAC Secured
+            Logged in as <strong>{currentUser.name}</strong>
+            {' '}({ROLE_LABELS[currentUser.role] ?? currentUser.role}) · OIML R 76 RBAC Secured
           </span>
         </footer>
       </main>
@@ -560,7 +612,13 @@ function Sidebar({
   currentUser: User
   onLogout: () => void
 }) {
-  const isAdmin = currentUser.role === 'ADMIN'
+  const isSA    = isSuperAdmin(currentUser)
+  const isLA    = currentUser.role === 'LAB_ADMIN'
+  const isSup   = currentUser.role === 'SUPERVISOR'
+  const canSeeUsers = isLabAdminOrAbove(currentUser)
+
+  const roleLabel = ROLE_LABELS[currentUser.role] ?? currentUser.role
+  const roleColors = ROLE_BADGE_COLORS[currentUser.role] ?? { bg: '#e6f4ed', color: '#1a7f37' }
 
   return (
     <aside className="sidebar">
@@ -576,10 +634,10 @@ function Sidebar({
       <div className="lab-switcher">
         <Weight size={17} className="lab-icon" />
         <div>
-          <small>ACTIVE LABORATORY</small>
-          <strong>{currentUser.laboratory}</strong>
+          <small>{isSA ? 'GLOBAL ACCESS' : 'ACTIVE LABORATORY'}</small>
+          <strong>{isSA ? 'All Laboratories' : currentUser.laboratory}</strong>
         </div>
-        <span className="chevron">⌄</span>
+        {isSA && <span className="chevron">⌄</span>}
       </div>
 
       <nav>
@@ -599,15 +657,15 @@ function Sidebar({
         })}
 
         <small className="nav-label admin-label">
-          {isAdmin ? 'ADMINISTRATION (FULL CRUD)' : 'MANAGEMENT'}
+          {isSA ? 'ADMINISTRATION (GLOBAL)' : isLA ? 'ADMINISTRATION (LAB)' : 'MANAGEMENT'}
         </small>
-        {isAdmin && (
+        {canSeeUsers && (
           <button
             className={active === 'Users' ? 'nav-item active' : 'nav-item'}
             onClick={() => navigate('Users')}
           >
             <Users size={16} />
-            Users Console
+            {isSA ? 'User Console (Global)' : 'User Console (Lab)'}
           </button>
         )}
         <button
@@ -615,7 +673,7 @@ function Sidebar({
           onClick={() => navigate('Settings')}
         >
           <Settings size={16} />
-          {isAdmin ? 'System Settings' : 'Laboratory Rules'}
+          {isLabAdminOrAbove(currentUser) ? 'System Settings' : 'Laboratory Rules'}
         </button>
       </nav>
 
@@ -624,14 +682,14 @@ function Sidebar({
           <span className="sync-dot" />
           <div>
             <strong>Session Active</strong>
-            <small>{isAdmin ? 'Supervisor Privileges' : 'Metrologist Access'}</small>
+            <small>{isSA ? 'Global Authority' : isLA ? 'Lab Privileges' : isSup ? 'Supervisor Access' : 'Metrologist Access'}</small>
           </div>
         </div>
         <div className="profile">
           <span className="avatar">{currentUser.name.slice(0, 2).toUpperCase()}</span>
           <div>
             <strong>{currentUser.name}</strong>
-            <small>{currentUser.role === 'ADMIN' ? 'Laboratory Supervisor' : 'Testing Metrologist'}</small>
+            <small style={{ color: roleColors.color }}>{roleLabel}</small>
           </div>
           <button className="logout-button" onClick={onLogout} title="Sign Out">
             ↪
@@ -700,7 +758,7 @@ function Dashboard({
         eyebrow="LEGAL METROLOGY WORKSPACE"
         title={`Welcome back, ${currentUser.name}`}
         description={
-          currentUser.role === 'ADMIN'
+          isLabAdminOrAbove(currentUser)
             ? 'Administrator console active with full CRUD control across instruments, personnel, certificates, and audit trails.'
             : 'Capture instrument identity, record observed load indications, and verify precision against OIML standards.'
         }
@@ -795,7 +853,7 @@ function ReportsView({
   onDeleteReport,
 }: {
   navigate: (page: string) => void
-  userRole: 'ADMIN' | 'OPERATOR'
+  userRole: string
   reports: ReportData[]
   onViewReport: (report: ReportData) => void
   onDeleteReport: (reportNumber: string) => void
@@ -884,7 +942,7 @@ function ReportsView({
                         >
                           <Printer size={13} /> View / Print Report →
                         </button>
-                        {userRole === 'ADMIN' && (
+                        {(userRole === 'SUPER_ADMIN' || userRole === 'LAB_ADMIN') && (
                           <button
                             className="text-button"
                             onClick={() => {
@@ -1070,11 +1128,11 @@ function AuditView({
   currentUser,
 }: {
   auditEvents: AuditEvent[]
-  userRole: 'ADMIN' | 'OPERATOR'
+  userRole: string
   currentUser: User
 }) {
   const [selectedActorFilter, setSelectedActorFilter] = useState<string>('ALL')
-  const isAdmin = userRole === 'ADMIN'
+  const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'LAB_ADMIN' || userRole === 'ADMIN'
 
   // Extract unique actors for admin filter
   const uniqueActors = useMemo(() => {

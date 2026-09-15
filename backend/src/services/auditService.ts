@@ -19,15 +19,42 @@ import { sha256Hex } from '../utils/crypto';
 import { Request } from 'express';
 
 export type AuditAction =
+  // Instruments
   | 'INSTRUMENT_REGISTERED'
+  | 'INSTRUMENT_UPDATED'
+  | 'INSTRUMENT_DELETED'
+  // Test Sessions
   | 'SESSION_STARTED'
   | 'OBSERVATION_ADDED'
   | 'CALCULATION_EXECUTED'
+  | 'TEST_SUBMITTED'
+  | 'TEST_APPROVED'
+  | 'TEST_REJECTED'
+  // Reports
   | 'REPORT_GENERATED'
   | 'REPORT_APPROVED'
+  | 'REPORT_REJECTED'
   | 'REPORT_REVOKED'
+  | 'REPORT_VERIFIED'
+  // Users
+  | 'USER_CREATED'
+  | 'USER_UPDATED'
+  | 'USER_ROLE_CHANGED'
+  | 'USER_LAB_ASSIGNED'
+  | 'USER_ACTIVATED'
+  | 'USER_DEACTIVATED'
+  | 'USER_DELETED'
+  // Auth
+  | 'LOGIN_SUCCESS'
+  | 'LOGIN_FAILED'
   | 'USER_LOGIN'
-  | 'USER_REFRESH';
+  | 'USER_REFRESH'
+  // Labs
+  | 'LAB_CREATED'
+  | 'LAB_UPDATED'
+  | 'LAB_DEACTIVATED'
+  // Security
+  | 'PERMISSION_DENIED';
 
 /**
  * Appends a new event to the immutable audit hash chain.
@@ -47,6 +74,12 @@ export async function appendAuditEvent(
   req: Request,
   extra: Record<string, unknown> = {},
 ): Promise<void> {
+  // Extract labId and role from the request's JWT payload (if authenticated)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const authUser = (req as any).user as { id?: string; role?: string; labId?: string } | undefined;
+  const actorLabId = authUser?.labId ?? null;
+  const actorRole  = authUser?.role  ?? null;
+
   // 1. Get the most recent audit entry's currHash
   const latest = await prisma.auditLog.findFirst({
     orderBy: { id: 'desc' },
@@ -60,7 +93,9 @@ export async function appendAuditEvent(
     action,
     resourceType,
     resourceId,
-    userId: userId ?? null,
+    userId:   userId ?? null,
+    role:     actorRole,
+    labId:    actorLabId,
     timestamp: new Date().toISOString(),
     ...extra,
   };
@@ -71,12 +106,14 @@ export async function appendAuditEvent(
   // 4. Insert into AuditLog
   await prisma.auditLog.create({
     data: {
-      userId: userId ?? null,
+      userId:      userId ?? null,
+      role:        actorRole,
+      labId:       actorLabId,
       action,
       resourceType,
       resourceId,
-      ipAddress: req.ip ?? req.socket?.remoteAddress ?? null,
-      userAgent: req.headers['user-agent'] ?? null,
+      ipAddress:   req.ip ?? req.socket?.remoteAddress ?? null,
+      userAgent:   req.headers['user-agent'] ?? null,
       eventData,
       prevHash,
       currHash,

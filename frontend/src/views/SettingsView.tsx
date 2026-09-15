@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Bell, Building2, FileCheck2, LockKeyhole, Save, ShieldCheck, UserRound } from 'lucide-react'
-import type { User } from '../services/authStore.ts'
+import type { User, UserRole } from '../services/authStore.ts'
 import { updateUser } from '../services/authStore.ts'
+import { ROLE_LABELS } from '../utils/rbac.ts'
 import '../styles/settings.css'
 
 type SettingsTab = 'Laboratory' | 'Standards' | 'Reports' | 'Security' | 'Notifications'
 type AccountTab = 'Profile' | 'Security' | 'Sessions'
 
-export function SettingsView({ userRole = 'OPERATOR' }: { userRole?: 'ADMIN' | 'OPERATOR' }) {
+export function SettingsView({ userRole = 'TEST_ENGINEER' }: { userRole?: UserRole }) {
   const [tab, setTab] = useState<SettingsTab>('Laboratory')
   const [saved, setSaved] = useState(false)
   const tabs: [SettingsTab, typeof Building2][] = [
@@ -51,7 +52,7 @@ export function SettingsView({ userRole = 'OPERATOR' }: { userRole?: 'ADMIN' | '
             {saved && <span className="saved-message">✓ Changes saved successfully</span>}
           </div>
           <SettingsTabContent tab={tab} />
-          {userRole === 'ADMIN' ? (
+          {(userRole === 'SUPER_ADMIN' || userRole === 'LAB_ADMIN') ? (
             <div className="settings-actions">
               <button className="button primary" onClick={save}>
                 <Save size={14} style={{ marginRight: '5px' }} /> Save system changes
@@ -59,7 +60,7 @@ export function SettingsView({ userRole = 'OPERATOR' }: { userRole?: 'ADMIN' | '
             </div>
           ) : (
             <div style={{ marginTop: '20px', padding: '10px 14px', background: '#f5f8f7', borderRadius: '6px', fontSize: '10px', color: '#687d7b' }}>
-              🔒 System-level settings are read-only for Metrologist accounts. Contact your Laboratory Supervisor to request changes.
+              🔒 System-level settings are read-only for {userRole === 'SUPERVISOR' ? 'Supervisor' : 'Test Engineer'} accounts. Contact your Laboratory Admin to request changes.
             </div>
           )}
         </section>
@@ -358,7 +359,7 @@ export function AccountSettings({
                 <div>
                   <h3>{currentUser.name}</h3>
                   <p>
-                    {currentUser.role === 'ADMIN' ? 'Laboratory Supervisor' : 'Testing Metrologist'} · {currentUser.laboratory}
+                    {ROLE_LABELS[currentUser.role] ?? currentUser.role} · {currentUser.laboratory}
                   </p>
                 </div>
               </div>
@@ -374,7 +375,7 @@ export function AccountSettings({
                 <label>
                   Assigned Role
                   <input
-                    value={currentUser.role === 'ADMIN' ? 'Laboratory Supervisor (Admin - Full CRUD)' : 'Testing Metrologist (Operator)'}
+                    value={ROLE_LABELS[currentUser.role] ?? currentUser.role}
                     readOnly
                     style={{ background: '#f0f3f2' }}
                   />
