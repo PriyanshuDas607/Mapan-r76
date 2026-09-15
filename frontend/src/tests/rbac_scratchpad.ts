@@ -10,38 +10,14 @@
  */
 
 import {
-  ROLES,
   ROLE_LABELS,
-  ROLE_BADGE_COLORS,
-  hasMinRole,
-  isSuperAdmin,
-  isLabAdminOrAbove,
-  isSupervisorOrAbove,
-  isTestEngineerOrAbove,
   canAccessLab,
   canManageRole,
   creatableRoles,
   permissions,
 } from '../utils/rbac'
 
-export type UserRole = 'SUPER_ADMIN' | 'LAB_ADMIN' | 'SUPERVISOR' | 'TEST_ENGINEER'
-
-export type User = {
-  id: string
-  name: string
-  email: string
-  passwordHash: string
-  role: UserRole
-  active?: boolean
-  laboratory?: string
-  department?: string
-  jobTitle?: string
-  phone?: string
-  createdAt?: string
-  lastLogin?: string
-  updatedAt?: string
-  labId?: string
-}
+import type { User, UserRole } from '../services/authStore'
 
 console.log('='.repeat(76))
 console.log('🏛️  MAPAN-R76: 4-TIER RBAC HIERARCHY & DATA ISOLATION SCRATCHPAD')
