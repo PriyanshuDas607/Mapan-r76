@@ -27,14 +27,14 @@ import { getAuth } from 'firebase/auth'
 
 // Firebase Configuration with universal fallback for production deployments (e.g. Vercel)
 export const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCK8wPzbMx1lkr9BsKZgoIkDa1pQeVWO1Q",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "mapan-1013c.firebaseapp.com",
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || "https://mapan-1013c-default-rtdb.firebaseio.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "mapan-1013c",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "mapan-1013c.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "268395097740",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:268395097740:web:93d3240312e67a6fdd95a9",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-2V9Z9E8N00",
+  apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_API_KEY) || "AIzaSyCK8wPzbMx1lkr9BsKZgoIkDa1pQeVWO1Q",
+  authDomain: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN) || "mapan-1013c.firebaseapp.com",
+  databaseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_DATABASE_URL) || "https://mapan-1013c-default-rtdb.firebaseio.com",
+  projectId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_PROJECT_ID) || "mapan-1013c",
+  storageBucket: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET) || "mapan-1013c.firebasestorage.app",
+  messagingSenderId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID) || "268395097740",
+  appId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_APP_ID) || "1:268395097740:web:93d3240312e67a6fdd95a9",
+  measurementId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_MEASUREMENT_ID) || "G-2V9Z9E8N00",
 }
 
 // Initialize Firebase App safely
